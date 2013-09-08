@@ -531,5 +531,5 @@ api.env = {
 		setAnalogOutput = function() end,
 		testBundledInput = function() end,
 	},
-	redstone = api.env.rs,
 }
+api.env.redstone = api.env.rs
