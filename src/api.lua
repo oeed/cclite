@@ -514,5 +514,22 @@ api.env = {
 	},
 	http = {
 		request = api.http.request,
-	}
+	},
+	rs = {
+		getSides = function() return {"top","bottom","left","right","fron","back"} end,
+		getInput = function() end,
+		getOutput = function() end,
+		getBundledInput = function() end,
+		getBundledOutput = function() end,
+		getAnalogInput = function() end,
+		getAnalogOutput = function() end,
+		setInput = function() end,
+		setOutput = function() end,
+		setBundledInput = function() end,
+		setBundledOutput = function() end,
+		setAnalogInput = function() end,
+		setAnalogOutput = function() end,
+		testBundledInput = function() end,
+	},
+	redstone = api.env.rs,
 }
