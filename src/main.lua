@@ -1,4 +1,3 @@
-
 require('http.HttpRequest')
 
 require('render')
@@ -300,7 +299,7 @@ end
 
 function love.draw()
 	Screen:draw()
-	if debug then
+	if debugmode then
 		love.graphics.print("FPS: " .. tostring(love.timer.getFPS()), (Screen.width * Screen.pixelWidth) - 85, 10)
 	end
 end
