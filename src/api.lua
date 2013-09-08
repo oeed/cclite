@@ -508,11 +508,9 @@ api.env = {
 	},
 	peripheral = {
 		isPresent = function(side) return false end,
-		getNames = function() return {} end,
 		getType = function(side) return nil end,
 		getMethods = function(side) return nil end,
 		call = function(side, method, ...) return nil end,
-		wrap = function (side) return nil end,
 	},
 	http = {
 		request = api.http.request,
