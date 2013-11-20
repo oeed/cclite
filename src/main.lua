@@ -231,7 +231,7 @@ function love.update()
 		if Screen.lastCursor == nil then
 			Screen.lastCursor = now
 		end
-		if now - Screen.lastCursor > 0.5 then
+		if now - Screen.lastCursor >= 0.25 then
 			Screen.showCursor = not Screen.showCursor
 			Screen.lastCursor = now
 		end
