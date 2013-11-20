@@ -284,8 +284,10 @@ function api.os.reboot()
 end
 
 api.fs = {}
-
 function api.fs.open(path, mode)
+	if type(path) ~= "string" or type(mode) ~= "string" then
+		error("Expected string, string",2)
+	end
 	path = api.fs.combine("", path)
 	if mode == "r" then
 		local sPath = nil
@@ -309,6 +311,9 @@ function api.fs.open(path, mode)
 	return nil
 end
 function api.fs.list(path)
+	if type(path) ~= "string" then
+		error("Expected string",2)
+	end
 	path = api.fs.combine("", path)
 	local res = {}
 	if love.filesystem.exists("data/" .. path) then -- This path takes precedence
@@ -322,35 +327,74 @@ function api.fs.list(path)
 	return res
 end
 function api.fs.exists(path)
-	if path == "/bios.lua" then return false end
+	if type(path) ~= "string" then
+		error("Expected string",2)
+	end
 	path = api.fs.combine("", path)
+	if path == "bios.lua" then return false end
 	return love.filesystem.exists("data/" .. path) or love.filesystem.exists("lua/" .. path)
 end
 function api.fs.isDir(path)
+	if type(path) ~= "string" then
+		error("Expected string",2)
+	end
 	path = api.fs.combine("", path)
 	return love.filesystem.isDirectory("data/" .. path) or love.filesystem.isDirectory("lua/" .. path)
 end
 function api.fs.isReadOnly(path)
+	if type(path) ~= "string" then
+		error("Expected string",2)
+	end
 	path = api.fs.combine("", path)
 	return string.sub(path, 1, 4) == "rom/"
 end
 function api.fs.getName(path)
+	if type(path) ~= "string" then
+		error("Expected string",2)
+	end
 	local fpath, name, ext = string.match(path, "(.-)([^\\/]-%.?([^%.\\/]*))$")
 	return name
 end
 function api.fs.getSize(path)
-	return nil
+	if type(path) ~= "string" then
+		error("Expected string",2)
+	end
+	path = api.fs.combine("", path)
+	if api.fs.exists(path) ~= true then
+		error("No such file",2)
+	end
+	
+	local sPath = nil
+	if love.filesystem.exists("data/" .. path) then
+		sPath = "data/" .. path
+	elseif love.filesystem.exists("lua/" .. path) then
+		sPath = "lua/" .. path
+	end
+
+	local _, size = love.filesystem.read( sPath )
+	if size == 0 then size = 512 end
+	return math.ceil(size/512)*512
 end
+
 function api.fs.getFreeSpace(path)
-	return nil
+	return math.huge
 end
+
 function api.fs.makeDir(path) -- All write functions are within data/
+	if type(path) ~= "string" then
+		error("Expected string",2)
+	end
 	path = api.fs.combine("", path)
 	if string.sub(path, 1, 4) ~= "rom/" then -- Stop user overwriting lua/rom/ with data/rom/
 		return love.filesystem.mkdir( "data/" .. path )
-	else return nil end
+	else
+		return nil
+	end
 end
 function api.fs.move(fromPath, toPath)
+	if type(fromPath) ~= "string" or type(toPath) ~= "string" then
+		error("Expected string, string",2)
+	end
 	-- Not implemented
 end
 
@@ -391,7 +435,11 @@ local function copytree(sFolder, sToFolder)
 		end
 	end
 end
+
 function api.fs.copy(fromPath, toPath)
+	if type(fromPath) ~= "string" or type(toPath) ~= "string" then
+		error("Expected string, string",2)
+	end
 	fromPath = api.fs.combine("", fromPath)
 	toPath = api.fs.combine("", toPath)
 	if string.sub(toPath, 1, 4) ~= "rom/" then -- Stop user overwriting lua/rom/ with data/rom/
@@ -400,12 +448,17 @@ function api.fs.copy(fromPath, toPath)
 end
 
 function api.fs.delete(path)
+	if type(path) ~= "string" then error("Expected string",2) end
 	path = api.fs.combine("", path)
 	if string.sub(path, 1, 4) ~= "rom/" then -- Stop user overwriting lua/rom/ with data/rom/
 		return deltree( "data/" .. path )
 	else return nil end
 end
+
 function api.fs.combine(basePath, localPath)
+	if type(basePath) ~= "string" or type(localPath) ~= "string" then
+		error("Expected string, string",2)
+	end
 	local path = "/" .. basePath .. "/" .. localPath
 	local tPath = {}
 	for part in path:gmatch("[^/]+") do
@@ -442,6 +495,9 @@ function api.rednet.broadcast()
 	end
 end
 function api.rednet.send()
+	if api.rednet.opened == nil then
+		error("No open sides")
+	end
 end
 function api.rednet.receive( nTimeout )
 end
@@ -454,11 +510,13 @@ function api.rednet.isOpen( sSide )
 end
 
 api.env = {
+	_VERSION = "Luaj-jse 2.0.3",
 	tostring = tostring,
 	tonumber = tonumber,
 	unpack = unpack,
 	getfenv = getfenv,
 	setfenv = setfenv,
+	rawequal = rawequal,
 	rawset = rawset,
 	rawget = rawget,
 	setmetatable = setmetatable,
@@ -562,11 +620,8 @@ api.env = {
 		getBundledOutput = function() end,
 		getAnalogInput = function() end,
 		getAnalogOutput = function() end,
-		setInput = function() end,
 		setOutput = function() end,
-		setBundledInput = function() end,
 		setBundledOutput = function() end,
-		setAnalogInput = function() end,
 		setAnalogOutput = function() end,
 		testBundledInput = function() end,
 	},
@@ -579,4 +634,7 @@ api.env = {
 		isOpen = api.rednet.isOpen,
 	},
 }
+api.env.redstone.getAnalogueInput = api.env.redstone.getAnalogInput
+api.env.redstone.getAnalogueOutput = api.env.redstone.getAnalogOutput
+api.env.redstone.setAnalogueOutput = api.env.redstone.setAnalogOutput
 api.env.rs = api.env.redstone
