@@ -6,45 +6,48 @@ A cc emulator written in lua
 Forum topic: [Link](http://www.computercraft.info/forums2/index.php?/topic/13445-lightweight-cc-emulator-download-now/)
 
 TODO:
-
-Correct os.queueEvent
-
-Find issue with sleep (or timers)
-
-(file object).writeLine does not add line to end.
+-----
 
 Fix random freezes.
 
 Add in more error checking
 
-Add in missing globals:
+Add in virtual peripheral types
 
-_VERSION
+Make peripheral api interface with virtual peripheral system.
 
-__inext
+**Complete FS api:**
 
-bit.*
+  * append mode
 
-disk.*
+  * binary modes
 
-gps.*
+**Add in missing globals:**
 
-rawequal
+  * _VERSION
 
-rednet.*
+  * __inext
 
-redstone.getAnalogueInput
+  * bit.*
 
-redstone.getAnalogueOutput
+  * disk.*
 
-redstone.setAnalogueOutput
+  * gps.*
 
-Remove (or hide) extra functions:
+  * rawequal
 
-redstone.setAnalogInput
+  * redstone.getAnalogueInput
 
-redstone.setBundledInput
+  * redstone.getAnalogueOutput
 
-redstone.setInput
+  * redstone.setAnalogueOutput
 
-string.gfind
+**Remove (or hide) extra functions:**
+
+  * redstone.setAnalogInput
+
+  * redstone.setBundledInput
+
+  * redstone.setInput
+
+  * string.gfind
