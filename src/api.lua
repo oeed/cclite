@@ -87,7 +87,7 @@ local function FileWriteHandle(path)
 			love.filesystem.write(path, sData)
 		end,
 		writeLine = function( data )
-			sData = sData .. data
+			sData = sData .. data .. string.char(10)
 		end,
 		write = function ( data )
 			sData = sData .. data
@@ -95,6 +95,8 @@ local function FileWriteHandle(path)
 	}
 	return handle
 end
+
+local peripherals = {}
 
 api = {}
 function api.init() -- Called after this file is loaded! Important. Else api.x is not defined
@@ -190,11 +192,11 @@ function api.term.isColor()
 	return true
 end
 function api.term.setCursorBlink( bool )
-	if type(bool) ~= "boolean" then return end
+	if type(bool) ~= "boolean" then error("Expected boolean",2) end
 	api.term.blink = bool
 end
 function  api.term.scroll( n )
-	if type(n) ~= "number" then return end
+	if type(n) ~= "number" then error("Expected number",2) end
 	local textBuffer = {}
 	local backgroundColourBuffer = {}
 	local textColourBuffer = {}
@@ -235,16 +237,19 @@ function api.os.day()
 	return Emulator.minecraft.day
 end
 function api.os.setComputerLabel(label)
-	if type(label) ~= "string" then return end
+	if type(label) ~= "string" and type(label) ~= "nil" then error("Expected string or nil",2) end
 	api.os.label = label
 end
 function api.os.getComputerLabel()
 	return api.os.label
 end
-function api.os.queueEvent( sEvent, ... )
-	table.insert(Emulator.eventQueue, { sEvent, unpack(...) })
+function api.os.queueEvent( ... )
+	local event = { ... }
+	if type(event[1]) ~= "string" then error("Expected string",2) end
+	table.insert(Emulator.eventQueue, event)
 end
 function api.os.startTimer( nTimeout )
+	if type(nTimeout) ~= "number" then error("Expected number",2) end
 	local timer = {
 		expires = love.timer.getTime() + nTimeout,
 	}
@@ -255,6 +260,7 @@ function api.os.startTimer( nTimeout )
 	return nil -- Erroor
 end
 function api.os.setAlarm( nTime )
+	if type(nTime) ~= "number" then error("Expected number",2) end
 	if type(nTime) ~= "number" then return end
 	if nTime < 0 or nTime > 24 then
 		error( "Number out of range: " .. tostring( nTime ) )
@@ -414,6 +420,39 @@ function api.fs.combine(basePath, localPath)
 	return table.concat(tPath, "/")
 end
 
+api.rednet = {}
+api.rednet.opened = nil
+function api.rednet.open( sSide )
+	if type(sSide) ~= "string" then error("string expected") end
+	if peripherals[sSide] == nil or peripherals[sSide].getType() ~= "modem" then
+		error("No modem on " .. sSide .. " side")
+	end
+	api.rednet.opened = sSide
+end
+function api.rednet.close( sSide )
+	if type(sSide) ~= "string" then error("string expected") end
+	if peripherals[sSide] == nil then
+		error("Invalid side")
+	end
+	api.rednet.opened = nil
+end
+function api.rednet.broadcast()
+	if api.rednet.opened == nil then
+		error("No open sides")
+	end
+end
+function api.rednet.send()
+end
+function api.rednet.receive( nTimeout )
+end
+function api.rednet.isOpen( sSide )
+	if type(sSide) ~= "string" then error("string expected") end
+	if peripherals[sSide] == nil then
+		error("Invalid side")
+	end
+	return api.rednet.opened == sSide
+end
+
 api.env = {
 	tostring = tostring,
 	tonumber = tonumber,
@@ -515,8 +554,8 @@ api.env = {
 	http = {
 		request = api.http.request,
 	},
-	rs = {
-		getSides = function() return {"top","bottom","left","right","fron","back"} end,
+	redstone = {
+		getSides = function() return {"top","bottom","left","right","front","back"} end,
 		getInput = function() end,
 		getOutput = function() end,
 		getBundledInput = function() end,
@@ -531,5 +570,13 @@ api.env = {
 		setAnalogOutput = function() end,
 		testBundledInput = function() end,
 	},
+	rednet = {
+		open = api.rednet.open,
+		close = api.rednet.close,
+		broadcast = api.rednet.broadcast,
+		send = api.rednet.send,
+		receive = api.rednet.receive,
+		isOpen = api.rednet.isOpen,
+	},
 }
-api.env.redstone = api.env.rs
+api.env.rs = api.env.redstone
