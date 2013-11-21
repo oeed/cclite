@@ -491,7 +491,13 @@ end
 
 -- Run the shell
 local ok, err = pcall( function()
-	os.run( {}, "rom/programs/shell" )
+	parallel.waitForAny( 
+		function()
+			os.run( {}, "rom/programs/shell" )
+		end,
+		function()
+			rednet.run()
+		end )
 end )
 
 -- If the shell errored, let the user read it.
