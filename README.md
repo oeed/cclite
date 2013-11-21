@@ -18,22 +18,10 @@ Add in virtual redstone system
 
 Make peripheral api interface with virtual peripheral system.
 
-Rework the entire fs.open function
-
-**Complete FS api:**
-
-  * append mode
-  * binary modes
+Rework the fs.open text read mode
 
 **Add in missing globals:**
 
   * __inext
-  * bit.*
   * disk.*
   * gps.*
-  * os.computerID
-
-**Remove (or hide) extra functions:**
-
-  * math.mod
-  * string.gfind
