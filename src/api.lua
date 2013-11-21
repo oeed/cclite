@@ -12,27 +12,31 @@ local function lines(str)
 	local t = {}
 	local function helper(line) table.insert(t, line) return "" end
 	helper((str:gsub("(.-)\r?\n", helper)))
+	if t[#t] == "" then t[#t] = nil end
 	return t
 end
 
 -- HELPER CLASSES/HANDLES
 -- TODO Make more efficient, use love.filesystem.lines
 local function HTTPHandle(contents, status)
+	local closed = false
 	local lineIndex = 1
-	local handle -- INFO: Hack to access itself
+	local handle
 	handle = {
 		close = function()
-			handle = nil
+			closed = true
 		end,
 		readLine = function()
+			if closed then return end
 			local str = contents[lineIndex]
 			lineIndex = lineIndex + 1
 			return str
 		end,
 		readAll = function()
+			if closed then return end
 			if lineIndex == 1 then
-				lineIndex = #contents
-				return table.concat(contents, '\n') .. '\n'
+				lineIndex = #contents + 1
+				return table.concat(contents, '\n')
 			else
 				local tData = {}
 				local data = handle.readLine()
@@ -40,7 +44,7 @@ local function HTTPHandle(contents, status)
 					table.insert(tData, data)
 					data = handle.readLine()
 				end
-				return table.concat(tData, '\n') .. '\n'
+				return table.concat(tData, '\n')
 			end
 		end,
 		getResponseCode = function()
@@ -50,22 +54,25 @@ local function HTTPHandle(contents, status)
 	return handle
 end
 
-local function FileReadHandle(contents)
+local function FileReadHandle( contents )
+	local closed = false
 	local lineIndex = 1
 	local handle
 	handle = {
 		close = function()
-			handle = nil
+			closed = true
 		end,
 		readLine = function()
+			if closed then return end
 			local str = contents[lineIndex]
 			lineIndex = lineIndex + 1
 			return str
 		end,
 		readAll = function()
+			if closed then return end
 			if lineIndex == 1 then
-				lineIndex = #contents
-				return table.concat(contents, '\n') .. '\n'
+				lineIndex = #contents + 1
+				return table.concat(contents, '\n')
 			else
 				local tData = {}
 				local data = handle.readLine()
@@ -73,24 +80,85 @@ local function FileReadHandle(contents)
 					table.insert(tData, data)
 					data = handle.readLine()
 				end
-				return table.concat(tData, '\n') .. '\n'
+				return table.concat(tData, '\n')
 			end
 		end
 	}
 	return handle
 end
 
-local function FileWriteHandle(path)
-	local sData = ""
+local function FileBinaryReadHandle( path )
+	local closed = false
+	local File = love.filesystem.newFile( path )
+	if File == nil then return end
+	File:open("r")
 	local handle = {
-		close = function(data)
-			love.filesystem.write(path, sData)
+		close = function()
+			closed = true
+			File:close()
+		end,
+		read = function()
+			if closed or File:eof() then return end
+			return string.byte(File:read(1))
+		end
+	}
+	return handle
+end
+
+local function FileWriteHandle( path, append )
+	local closed = false
+	local File = love.filesystem.newFile( path )
+	if File == nil then return end
+	File:open(append and "a" or "w")
+	local handle = {
+		close = function()
+			closed = true
+			File:close()
 		end,
 		writeLine = function( data )
-			sData = sData .. data .. string.char(10)
+			if closed then error("Stream closed",2) end
+			File:write(data .. string.char(10))
 		end,
 		write = function ( data )
-			sData = sData .. data
+			if closed then error("Stream closed",2) end
+			File:write(data)
+		end,
+		flush = function()
+			if File.flush then
+				File:flush()
+			else
+				File:close()
+				File = love.filesystem.newFile( path )
+				File:open("a")
+			end
+		end
+	}
+	return handle
+end
+
+local function FileBinaryWriteHandle( path, append )
+	local closed = false
+	local File = love.filesystem.newFile( path )
+	if File == nil then return end
+	File:open(append and "a" or "w")
+	local handle = {
+		close = function()
+			closed = true
+			File:close()
+		end,
+		write = function ( data )
+			if closed then return end
+			if type(data) ~= "number" then return end
+			File:write(string.char(math.max(math.min(data,255),0)))
+		end,
+		flush = function()
+			if File.flush then
+				File:flush()
+			else
+				File:close()
+				File = love.filesystem.newFile( path )
+				File:open("a")
+			end
 		end
 	}
 	return handle
@@ -296,17 +364,17 @@ function api.fs.open(path, mode)
 		elseif love.filesystem.exists("lua/" .. path) then
 			sPath = "lua/" .. path
 		end
-		if sPath == nil or sPath == "lua/bios.lua" then return nil end
+		if sPath == nil or sPath == "lua/bios.lua" then return end
 
 		local contents, size = love.filesystem.read( sPath )
 
 		return FileReadHandle(lines(contents))
-	elseif mode == "w" then
-		if api.fs.exists( path ) then -- Write mode overwrites! FIXME: Wait until handle.close() is called
-			api.fs.delete( path )
-		end
-
-		return FileWriteHandle("data/" .. path)
+	elseif mode == "rb" then
+		return FileBinaryReadHandle("data/" .. path)
+	elseif mode == "w" or mode == "a" then
+		return FileWriteHandle("data/" .. path,mode == "a")
+	elseif mode == "wb" or mode == "ab" then
+		return FileBinaryWriteHandle("data/" .. path,mode == "ab")
 	end
 	return nil
 end
