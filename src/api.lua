@@ -164,8 +164,6 @@ local function FileBinaryWriteHandle( path, append )
 	return handle
 end
 
-local peripherals = {}
-
 api = {}
 function api.init() -- Called after this file is loaded! Important. Else api.x is not defined
 	api.term = {
@@ -178,6 +176,29 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 	api.os = {
 		label = nil
 	}
+end
+
+api.cclite = {}
+api.cclite.peripherals = {}
+function api.cclite.peripheralAttach( sSide, sType )
+	if type(sSide) ~= "string" or type(sType) ~= "string" then
+		error("Expected string, string",2)
+	end
+	if not peripheral[sType] then
+		error("No virtual peripheral of type " .. sType,2)
+	end
+	if api.cclite.peripherals[sSide] then
+		error("Peripheral already attached to " .. sSide,2)
+	end
+	api.cclite.peripherals[sSide] = peripheral[sType]()
+end
+
+function api.cclite.peripheralDetach( sSide )
+	if type(sSide) ~= "string" then error("Expected string",2) end
+	if not api.cclite.peripherals[sSide] then
+		error("No peripheral attached to " .. sSide,2)
+	end
+	api.cclite.peripherals[sSide] = nil
 end
 
 api.http = {}
@@ -263,7 +284,7 @@ function api.term.setCursorBlink( bool )
 	if type(bool) ~= "boolean" then error("Expected boolean",2) end
 	api.term.blink = bool
 end
-function  api.term.scroll( n )
+function api.term.scroll( n )
 	if type(n) ~= "number" then error("Expected number",2) end
 	local textBuffer = {}
 	local backgroundColourBuffer = {}
@@ -349,6 +370,35 @@ function api.os.shutdown()
 end
 function api.os.reboot()
 	Emulator:stop( true ) -- Reboots on next update/tick
+end
+
+api.peripheral = {}
+function api.peripheral.isPresent( sSide )
+	if type(sSide) ~= "string" then error("Expected string",2) end
+	return api.cclite.peripherals[sSide] ~= nil
+end
+function api.peripheral.getType( sSide )
+	if type(sSide) ~= "string" then error("Expected string",2) end
+	if api.cclite.peripherals[sSide] then return api.cclite.peripherals[sSide].getType() end
+	return
+end
+function api.peripheral.getMethods( sSide )
+	if type(sSide) ~= "string" then error("Expected string",2) end
+	if api.cclite.peripherals[sSide] then return api.cclite.peripherals[sSide].getMethods() end
+	return
+end
+function api.peripheral.call( sSide, sMethod, ... )
+	if type(sSide) ~= "string" then error("Expected string",2) end
+	if type(sMethod) ~= "string" then error("Expected string, string",2) end
+	if not api.cclite.peripherals[sSide] then error("No peripheral attached",2) end
+	return api.cclite.peripherals[sSide].call(sSide, sMethod, ...)
+end
+function api.peripheral.getNames()
+	local names = {}
+	for k,v in pairs(api.cclite.peripherals) do
+		table.insert(names,k)
+	end
+	return names
 end
 
 api.fs = {}
@@ -614,6 +664,10 @@ api.env = {
 	coroutine = coroutine,
 
 	-- CC apis (BIOS completes api.)
+	cclite = {
+		peripheralAttach = api.cclite.peripheralAttach,
+		peripheralDetach = api.cclite.peripheralDetach,
+	},
 	term = {
 		native = {
 			clear = api.term.clear,
@@ -678,10 +732,11 @@ api.env = {
 		reboot = api.os.reboot,
 	},
 	peripheral = {
-		isPresent = function(side) return false end,
-		getType = function(side) return nil end,
-		getMethods = function(side) return nil end,
-		call = function(side, method, ...) return nil end,
+		isPresent = api.peripheral.isPresent,
+		getType = api.peripheral.getType,
+		getMethods = api.peripheral.getMethods,
+		call = api.peripheral.call,
+		getNames = api.peripheral.getNames,
 	},
 	http = {
 		request = api.http.request,

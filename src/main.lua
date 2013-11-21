@@ -4,6 +4,13 @@ require('bit.numberlua')
 require('render')
 require('api')
 
+-- Load virtual peripherals.
+peripheral = {}
+local tFiles = love.filesystem.enumerate("peripheral")
+for k,v in pairs(tFiles) do
+	require("peripheral." .. v:sub(1,-5))
+end
+
 keys = {
 	["q"] = 16, ["w"] = 17, ["e"] = 18, ["r"] = 19,
 	["t"] = 20, ["y"] = 21, ["u"] = 22, ["i"] = 23,

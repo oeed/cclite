@@ -3,15 +3,10 @@ function love.conf(t)
     t.title = "ComputerCraft Emulator"
     t.author = "Sorroko"
     t.version = "0.8.0"
-
+	t.release = true
+	t.console = debugmode
     t.modules.physics = false
-
-    if debugmode then
-   	    t.console = true
-        t.release = false
-	else
-        t.screen = false -- Disable screen, wait for resize in main.lua
-        t.console = false
-        t.release = true
-    end
+	t.modules.audio = false
+	t.modules.image = false
+	t.modules.sound = false
 end
