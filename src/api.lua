@@ -577,6 +577,47 @@ function api.rednet.isOpen( sSide )
 	return api.rednet.opened == sSide
 end
 
+api.bit = {}
+function api.bit.norm(val)
+	while val < 0 do val = val + 4294967296 end
+	return val
+end
+function api.bit.blshift( n, bits )
+	return api.bit.norm(bit.lshift(n, bits))
+end
+function api.bit.brshift( n, bits )
+	return api.bit.norm(bit.arshift(n, bits))
+end
+function api.bit.blogic_rshift( n, bits )
+	return api.bit.norm(bit.rshift(n, bits))
+end
+function api.bit.bxor( m, n )
+	return api.bit.norm(bit.bxor(m, n))
+end
+function api.bit.bor( m, n )
+	return api.bit.norm(bit.bor(m, n))
+end
+function api.bit.band( m, n )
+	return api.bit.norm(bit.band(m, n))
+end
+function api.bit.bnot( n )
+	return api.bit.norm(bit.bnot(n))
+end
+
+function tablecopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in pairs(orig) do
+            copy[orig_key] = orig_value
+        end
+    else
+        copy = orig
+    end
+    return copy
+end
+
 api.env = {
 	_VERSION = "Luaj-jse 2.0.3",
 	tostring = tostring,
@@ -603,8 +644,8 @@ api.env = {
 		return f, err
 	end,
 
-	math = math,
-	string = string,
+	math = tablecopy(math),
+	string = tablecopy(string),
 	table = table,
 	coroutine = coroutine,
 
@@ -660,6 +701,7 @@ api.env = {
 	os = {
 		clock = os.clock,
 		getComputerID = function() return 1 end,
+		computerID = function() return 1 end,
 		setComputerLabel = api.os.setComputerLabel,
 		getComputerLabel = api.os.getComputerLabel,
 		computerLabel = api.os.getComputerLabel,
@@ -701,8 +743,19 @@ api.env = {
 		receive = api.rednet.receive,
 		isOpen = api.rednet.isOpen,
 	},
+	bit = {
+		blshift = api.bit.blshift,
+		brshift = api.bit.brshift,
+		blogic_rshift = api.bit.blogic_rshift,
+		bxor = api.bit.bxor,
+		bor = api.bit.bor,
+		band = api.bit.band,
+		bnot = api.bit.bnot,
+	},
 }
 api.env.redstone.getAnalogueInput = api.env.redstone.getAnalogInput
 api.env.redstone.getAnalogueOutput = api.env.redstone.getAnalogOutput
 api.env.redstone.setAnalogueOutput = api.env.redstone.setAnalogOutput
 api.env.rs = api.env.redstone
+api.env.math.mod = nil
+api.env.string.gfind = nil
