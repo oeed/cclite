@@ -541,42 +541,6 @@ function api.fs.combine(basePath, localPath)
 	return table.concat(tPath, "/")
 end
 
-api.rednet = {}
-api.rednet.opened = nil
-function api.rednet.open( sSide )
-	if type(sSide) ~= "string" then error("string expected") end
-	if peripherals[sSide] == nil or peripherals[sSide].getType() ~= "modem" then
-		error("No modem on " .. sSide .. " side")
-	end
-	api.rednet.opened = sSide
-end
-function api.rednet.close( sSide )
-	if type(sSide) ~= "string" then error("string expected") end
-	if peripherals[sSide] == nil then
-		error("Invalid side")
-	end
-	api.rednet.opened = nil
-end
-function api.rednet.broadcast()
-	if api.rednet.opened == nil then
-		error("No open sides")
-	end
-end
-function api.rednet.send()
-	if api.rednet.opened == nil then
-		error("No open sides")
-	end
-end
-function api.rednet.receive( nTimeout )
-end
-function api.rednet.isOpen( sSide )
-	if type(sSide) ~= "string" then error("string expected") end
-	if peripherals[sSide] == nil then
-		error("Invalid side")
-	end
-	return api.rednet.opened == sSide
-end
-
 api.bit = {}
 function api.bit.norm(val)
 	while val < 0 do val = val + 4294967296 end
@@ -734,14 +698,6 @@ api.env = {
 		setBundledOutput = function() end,
 		setAnalogOutput = function() end,
 		testBundledInput = function() end,
-	},
-	rednet = {
-		open = api.rednet.open,
-		close = api.rednet.close,
-		broadcast = api.rednet.broadcast,
-		send = api.rednet.send,
-		receive = api.rednet.receive,
-		isOpen = api.rednet.isOpen,
 	},
 	bit = {
 		blshift = api.bit.blshift,

@@ -18,10 +18,8 @@ Add in virtual redstone system
 
 Make peripheral api interface with virtual peripheral system.
 
-Rework the fs.open text read mode
+Rework the fs.open text read mode to use File objects.
 
 **Add in missing globals:**
 
   * __inext
-  * disk.*
-  * gps.*

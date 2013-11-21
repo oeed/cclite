@@ -1,9 +1,8 @@
 local native = peripheral
-local sides = {"top","bottom","left","right","front","back"}
 
 function getNames()
 	local tResults = {}
-	for n,sSide in ipairs( sides ) do
+	for n,sSide in ipairs( rs.getSides() ) do
 		if native.isPresent( sSide ) then
 			table.insert( tResults, sSide )
 			if native.getType( sSide ) == "modem" and not native.call( sSide, "isWireless" ) then
@@ -21,7 +20,7 @@ function isPresent( _sSide )
 	if native.isPresent( _sSide ) then
 		return true
 	end
-	for n,sSide in ipairs( sides ) do
+	for n,sSide in ipairs( rs.getSides() ) do
 		if native.getType( sSide ) == "modem" and not native.call( sSide, "isWireless" ) then
 			if native.call( sSide, "isPresentRemote", _sSide )  then
 				return true
@@ -35,24 +34,10 @@ function getType( _sSide )
 	if native.isPresent( _sSide ) then
 		return native.getType( _sSide )
 	end
-	for n,sSide in ipairs( sides ) do
-		if native.getType( sSide ) == "modem" and not native.call( sSide, "isWireless" ) then
-			if native.call( sSide, "isPresentRemote", _sSide )  then
-				return native.call( sSide, "getTypeRemote", _sSide ) 
-			end
-		end
-	end
-	return nil
-end
-
-function call( _sSide, _sMethod, ... )
-	if native.isPresent( _sSide ) then
-		return native.call( _sSide, _sMethod, ... )
-	end
 	for n,sSide in ipairs( rs.getSides() ) do
 		if native.getType( sSide ) == "modem" and not native.call( sSide, "isWireless" ) then
 			if native.call( sSide, "isPresentRemote", _sSide )  then
-				return native.call( sSide, "callRemote", _sSide, _sMethod, ... ) 
+				return native.call( sSide, "getTypeRemote", _sSide ) 
 			end
 		end
 	end
@@ -67,6 +52,20 @@ function getMethods( _sSide )
 		if native.getType( sSide ) == "modem" and not native.call( sSide, "isWireless" ) then
 			if native.call( sSide, "isPresentRemote", _sSide )  then
 				return native.call( sSide, "getMethodsRemote", _sSide ) 
+			end
+		end
+	end
+	return nil
+end
+
+function call( _sSide, _sMethod, ... )
+	if native.isPresent( _sSide ) then
+		return native.call( _sSide, _sMethod, ... )
+	end
+	for n,sSide in ipairs( rs.getSides() ) do
+		if native.getType( sSide ) == "modem" and not native.call( sSide, "isWireless" ) then
+			if native.call( sSide, "isPresentRemote", _sSide )  then
+				return native.call( sSide, "callRemote", _sSide, _sMethod, ... ) 
 			end
 		end
 	end
