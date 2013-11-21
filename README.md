@@ -14,40 +14,26 @@ Add in more error checking
 
 Add in virtual peripheral types
 
+Add in virtual redstone system
+
 Make peripheral api interface with virtual peripheral system.
+
+Rework the entire fs.open function
 
 **Complete FS api:**
 
   * append mode
-
   * binary modes
 
 **Add in missing globals:**
 
-  * _VERSION
-
   * __inext
-
   * bit.*
-
   * disk.*
-
   * gps.*
-
-  * rawequal
-
-  * redstone.getAnalogueInput
-
-  * redstone.getAnalogueOutput
-
-  * redstone.setAnalogueOutput
+  * os.computerID
 
 **Remove (or hide) extra functions:**
 
-  * redstone.setAnalogInput
-
-  * redstone.setBundledInput
-
-  * redstone.setInput
-
+  * math.mod
   * string.gfind
