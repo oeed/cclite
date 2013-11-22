@@ -391,7 +391,7 @@ function api.peripheral.call( sSide, sMethod, ... )
 	if type(sSide) ~= "string" then error("Expected string",2) end
 	if type(sMethod) ~= "string" then error("Expected string, string",2) end
 	if not api.cclite.peripherals[sSide] then error("No peripheral attached",2) end
-	return api.cclite.peripherals[sSide].call(sSide, sMethod, ...)
+	return api.cclite.peripherals[sSide].call(sMethod, ...)
 end
 function api.peripheral.getNames()
 	local names = {}
@@ -718,8 +718,8 @@ api.env = {
 	},
 	os = {
 		clock = os.clock,
-		getComputerID = function() return 1 end,
-		computerID = function() return 1 end,
+		getComputerID = function() return 0 end,
+		computerID = function() return 0 end,
 		setComputerLabel = api.os.setComputerLabel,
 		getComputerLabel = api.os.getComputerLabel,
 		computerLabel = api.os.getComputerLabel,
