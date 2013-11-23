@@ -351,7 +351,7 @@ function api.os.startTimer( nTimeout )
 	for k, v in pairs(Emulator.actions.timers) do
 		if v == timer then return k end
 	end
-	return nil -- Erroor
+	return nil -- Error
 end
 function api.os.setAlarm( nTime )
 	if type(nTime) ~= "number" then error("Expected number",2) end
