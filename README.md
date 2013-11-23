@@ -16,9 +16,15 @@ Add in virtual peripheral types
 
 Add in virtual redstone system
 
-Make peripheral api interface with virtual peripheral system.
+Fix odd endPage bug in virtual printer.
+
+Figure out how to manage disk drives and mounting.
 
 Rework the fs.open text read mode to use File objects.
+
+Fix Error Levels
+
+Make peripheralAttach only add valid sides.
 
 **Add in missing globals:**
 

@@ -192,13 +192,18 @@ function api.cclite.peripheralAttach( sSide, sType )
 	end
 	api.cclite.peripherals[sSide] = peripheral[sType]()
 end
-
 function api.cclite.peripheralDetach( sSide )
 	if type(sSide) ~= "string" then error("Expected string",2) end
 	if not api.cclite.peripherals[sSide] then
 		error("No peripheral attached to " .. sSide,2)
 	end
 	api.cclite.peripherals[sSide] = nil
+end
+function api.cclite.call( sSide, sMethod, ... )
+	if type(sSide) ~= "string" then error("Expected string",2) end
+	if type(sMethod) ~= "string" then error("Expected string, string",2) end
+	if not api.cclite.peripherals[sSide] then error("No peripheral attached",2) end
+	return api.cclite.peripherals[sSide].ccliteCall(sMethod, ...)
 end
 
 api.http = {}
@@ -667,6 +672,7 @@ api.env = {
 	cclite = {
 		peripheralAttach = api.cclite.peripheralAttach,
 		peripheralDetach = api.cclite.peripheralDetach,
+		call = api.cclite.call,
 	},
 	term = {
 		native = {

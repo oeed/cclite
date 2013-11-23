@@ -10,6 +10,9 @@ function peripheral.commandBlock()
 		elseif sMethod == "setCommand" then
 			if type(tArgs[1]) ~= "string" then error("Expected string",2) end
 			cmd = tArgs[1]
+		elseif sMethod == "runCommand" then
+		else
+			error("No such method " .. sMethod,2)
 		end
 	end
 	return obj
