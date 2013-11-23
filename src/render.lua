@@ -109,10 +109,14 @@ function Screen:draw()
 	for y = 0, self.height - 1 do
 		for x = 0, self.width - 1 do
 			local text = self.textB[y + 1][x + 1]
+			if string.byte(text) == 9 then
+				text = " "
+			elseif string.byte(text) < 32 or string.byte(text) > 126 then
+				text = "?"
+			end
 			local offset = self.pixelWidth / 2 - self.font:getWidth(text) / 2 -- Could also create a lookup table of widths on load
 			setColor( COLOUR_CODE[ self.textColourB[y + 1][x + 1] ] )
 			lprint( text, (x * self.pixelWidth) + offset, (y * self.pixelHeight) + self.textOffset)
-
 		end
 	end
 
