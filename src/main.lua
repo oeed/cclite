@@ -64,7 +64,6 @@ Emulator = {
 	minecraft = {
 		time = 0,
 		day = 0,
-		MAX_TIME_IN_DAY = 1440,
 	},
 	mouse = {
 		isPressed = false,
@@ -118,12 +117,6 @@ function Emulator:resume( ... )
     	print(err) -- Print to debug console, errors are handled in bios.
     end
     return ok, err
-end
-
-local love_timer_sleep = love.timer.sleep -- in s (like >=0.8.0)
-if love._version:find("^0%.[0-7]%.") then -- if version < 0.8.0
-   -- love.timer.sleep in ms
-   love_timer_sleep = function(s) love.timer.sleep(s*1000) end
 end
 
 function love.load()
@@ -204,16 +197,11 @@ end
 
 --[[
 	Not implementing:
-	redstone
 	disk
 	disk_eject
-	peripheral
-	peripheral_detatch
 	modem_message
 	monitor_touch
 	monitor_resize
-
-	Emulator does not handle peripherals.
 ]]
 
 function updateShortcut(name, key1, key2, cb)
@@ -317,5 +305,5 @@ function love.draw()
 		next_time = cur_time
 		return
 	end
-	if lockfps then love_timer_sleep(next_time - cur_time) end
+	if lockfps then love.timer.sleep(next_time - cur_time) end
 end

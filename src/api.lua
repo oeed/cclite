@@ -191,6 +191,7 @@ function api.cclite.peripheralAttach( sSide, sType )
 		error("Peripheral already attached to " .. sSide,2)
 	end
 	api.cclite.peripherals[sSide] = peripheral[sType]()
+	table.insert(Emulator.eventQueue, {"peripheral",sSide})
 end
 function api.cclite.peripheralDetach( sSide )
 	if type(sSide) ~= "string" then error("Expected string",2) end
@@ -198,6 +199,7 @@ function api.cclite.peripheralDetach( sSide )
 		error("No peripheral attached to " .. sSide,2)
 	end
 	api.cclite.peripherals[sSide] = nil
+	table.insert(Emulator.eventQueue, {"peripheral_detach",sSide})
 end
 function api.cclite.call( sSide, sMethod, ... )
 	if type(sSide) ~= "string" then error("Expected string",2) end
@@ -675,6 +677,7 @@ api.env = {
 		peripheralAttach = api.cclite.peripheralAttach,
 		peripheralDetach = api.cclite.peripheralDetach,
 		call = api.cclite.call,
+		log = print,
 	},
 	term = {
 		native = {

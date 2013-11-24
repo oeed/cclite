@@ -78,6 +78,7 @@ function peripheral.wiredModem()
 			local tmpobj = peripheral[sType]()
 			typeC[tmpobj.getType()] = (typeC[tmpobj.getType()] or -1) + 1
 			remote[tmpobj.getType() .. "_" .. tostring(typeC[tmpobj.getType()])] = tmpobj
+			table.insert(Emulator.eventQueue, {"peripheral",tmpobj.getType() .. "_" .. tostring(typeC[tmpobj.getType()])})
 		elseif sMethod == "peripheralDetach" then
 			local sSide = unpack(tArgs)
 			if type(sSide) ~= "string" then error("Expected string",2) end
@@ -85,6 +86,7 @@ function peripheral.wiredModem()
 				error("No peripheral attached to " .. sSide,2)
 			end
 			remote[sSide] = nil
+			table.insert(Emulator.eventQueue, {"peripheral_detach",sSide})
 		else
 			error("No such method " .. sMethod,2)
 		end
