@@ -1,4 +1,5 @@
 debugmode = false
+lockfps = true
 function love.conf(t)
     t.title = "ComputerCraft Emulator"
     t.author = "Sorroko"

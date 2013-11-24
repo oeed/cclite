@@ -24,6 +24,8 @@ Rework the fs.open text read mode to use File objects.
 
 Fix Error Levels
 
+os.pullEvent(Raw) cannot pull a specific event.
+
 Make peripheralAttach only add valid sides.
 
 **Add in missing globals:**

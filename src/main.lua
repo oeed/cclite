@@ -266,10 +266,9 @@ function love.update(dt)
 
 	if #Emulator.actions.alarms > 0 then
 		local currentTime = api.env.os.time()
-		local currentDay = api.env.os.day()
 
 		for k, v in pairs(Emulator.actions.alarms) do
-        	if v.day == currentDay and v.time >= currentTime then
+        	if currentTime >= v.time then
             	table.insert(Emulator.eventQueue, {"alarm", k})
            		Emulator.actions.alarms[k] = nil
         	end
@@ -295,17 +294,9 @@ function love.update(dt)
 
     local currentClock = os.clock()
 
-    -- Check if a second has passed since the last update.
-    if currentClock - Emulator.lastUpdateClock >= 1 then
-        Emulator.lastUpdateClock = currentClock
-        Emulator.minecraft.time  = Emulator.minecraft.time + 1
-
-        -- Roll over the time and add another day if the time goes over the max day time.
-        if Emulator.minecraft.time > Emulator.minecraft.MAX_TIME_IN_DAY then
-            Emulator.minecraft.time = 0
-            Emulator.minecraft.day  = Emulator.minecraft.day + 1
-        end
-    end
+    -- Update internal Minecraft time.
+	Emulator.minecraft.time = (os.clock()*0.02)%24
+	Emulator.minecraft.day  = math.floor(os.clock()*0.2/60)
 
     if #Emulator.eventQueue > 0 then
 		for k, v in pairs(Emulator.eventQueue) do
@@ -326,5 +317,5 @@ function love.draw()
 		next_time = cur_time
 		return
 	end
-	love_timer_sleep(next_time - cur_time)
+	if lockfps then love_timer_sleep(next_time - cur_time) end
 end

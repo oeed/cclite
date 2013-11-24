@@ -324,8 +324,11 @@ function api.term.scroll( n )
 end
 
 api.os = {}
+function api.os.clock()
+	return math.floor(os.clock()*20)/20
+end
 function api.os.time()
-	return Emulator.minecraft.time / 60
+	return Emulator.minecraft.time
 end
 function api.os.day()
 	return Emulator.minecraft.day
@@ -362,13 +365,12 @@ function api.os.setAlarm( nTime )
 	local currentDay = Emulator.minecraft.day
 	local alarm = {
 		time = nTime,
-		day = nTime <= Emulator.minecraft.time / 60 and currentDay + 1 or currentDay
 	}
 	table.insert(Emulator.actions.alarms, alarm)
 	for k, v in pairs(Emulator.actions.alarms) do
 		if v == alarm then return k end
 	end
-	return nil -- Erroor
+	return nil -- Error
 end
 function api.os.shutdown()
 	Emulator:stop()
@@ -723,7 +725,7 @@ api.env = {
 		combine = api.fs.combine,
 	},
 	os = {
-		clock = os.clock,
+		clock = api.os.clock,
 		getComputerID = function() return 0 end,
 		computerID = function() return 0 end,
 		setComputerLabel = api.os.setComputerLabel,
