@@ -48,8 +48,8 @@ Screen = {
 	pixelHeight = 9 * 2,
 	showCursor = false,
 	textOffset = 3, -- Small correction for font, align the bottom of font with bottom of pixel.
-	showCursor = false,
 	lastCursor = nil,
+	dirty = true,
 }
 function Screen:init()
 	for y = 1, self.height do
@@ -75,12 +75,11 @@ local ldrawLine = love.graphics.line
 local lprint = love.graphics.print
 
 local lastColor
-local function setColor(c)
-	if lastColor ~= c then
+local function setColor(c,f)
+	if f or lastColor ~= c then
 		lastColor = c
 		lsetCol(c)
 	end
-	return self
 end
 
 function Screen:draw()
@@ -95,6 +94,7 @@ function Screen:draw()
 	-- i.e. each pixel is updated independantly on a canvas
 	-- copy the canvas to main canvas only when dirty/changed (blinking cursor)
 
+	setColor( COLOUR_CODE[ self.backgroundColourB[1][1] ], true )
 	for y = 0, self.height - 1 do
 		for x = 0, self.width - 1 do
 
@@ -109,14 +109,17 @@ function Screen:draw()
 	for y = 0, self.height - 1 do
 		for x = 0, self.width - 1 do
 			local text = self.textB[y + 1][x + 1]
-			if string.byte(text) == 9 then
+			local sByte = string.byte(text)
+			if sByte == 9 then
 				text = " "
-			elseif string.byte(text) < 32 or string.byte(text) > 126 then
+			elseif sByte < 32 or sByte > 126 then
 				text = "?"
 			end
-			local offset = self.pixelWidth / 2 - self.font:getWidth(text) / 2 -- Could also create a lookup table of widths on load
-			setColor( COLOUR_CODE[ self.textColourB[y + 1][x + 1] ] )
-			lprint( text, (x * self.pixelWidth) + offset, (y * self.pixelHeight) + self.textOffset)
+			if text ~= " " then
+				local offset = self.pixelWidth / 2 - self.font:getWidth(text) / 2 -- Could also create a lookup table of widths on load
+				setColor( COLOUR_CODE[ self.textColourB[y + 1][x + 1] ] )
+				lprint( text, (x * self.pixelWidth) + offset, (y * self.pixelHeight) + self.textOffset)
+			end
 		end
 	end
 

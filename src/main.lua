@@ -69,7 +69,9 @@ Emulator = {
 		isPressed = false,
 		lastTermX = nil,
 		lastTermY = nil,
-	}
+	},
+	lastFPS = love.timer.getTime(),
+	FPS = love.timer.getFPS(),
 }
 
 function Emulator:start()
@@ -120,8 +122,10 @@ function Emulator:resume( ... )
 end
 
 function love.load()
-	min_dt = 1/20
-	next_time = love.timer.getMicroTime()
+	if lockfps > 0 then 
+		min_dt = 1/lockfps
+		next_time = love.timer.getMicroTime()
+	end
 
 	love.graphics.setMode( Screen.width * Screen.pixelWidth, Screen.height * Screen.pixelHeight, false, true, 0 )
 	love.graphics.setCaption( "ComputerCraft Emulator" )
@@ -218,7 +222,7 @@ function updateShortcut(name, key1, key2, cb)
 end
 
 function love.update(dt)
-	next_time = next_time + min_dt
+	if lockfps > 0 then next_time = next_time + min_dt end
 	local now = love.timer.getTime()
 	HttpRequest.checkRequests()
 	if Emulator.reboot then Emulator:start() end
@@ -240,9 +244,17 @@ function love.update(dt)
 		if now - Screen.lastCursor >= 0.25 then
 			Screen.showCursor = not Screen.showCursor
 			Screen.lastCursor = now
+			Screen.dirty = true
 		end
 	end
-
+	if debugmode then
+		if now - Emulator.lastFPS >= 1 then
+			Emulator.FPS = love.timer.getFPS()
+			Emulator.lastFPS = now
+			Screen.dirty = true
+		end
+	end
+	
 	if #Emulator.actions.timers > 0 then
 		for k, v in pairs(Emulator.actions.timers) do
 			if now > v.expires then
@@ -294,16 +306,66 @@ function love.update(dt)
 	end
 end
 
+local lastFPS,fps = love.timer.getTime(),love.timer.getFPS()
 function love.draw()
-	Screen:draw()
-	if debugmode then
-		love.graphics.print("FPS: " .. tostring(love.timer.getFPS()), (Screen.width * Screen.pixelWidth) - 85, 10)
+	if Screen.dirty then
+		Screen:draw()
+		if debugmode then
+			love.graphics.setColor({0,0,0})
+			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.width * Screen.pixelWidth) - 84, 11)
+			love.graphics.setColor({255,255,255})
+			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.width * Screen.pixelWidth) - 85, 10)
+		end
 	end
-	
-	local cur_time = love.timer.getMicroTime()
-	if next_time <= cur_time then
-		next_time = cur_time
-		return
+	if lockfps > 0 then 
+		local cur_time = love.timer.getMicroTime()
+		if next_time <= cur_time then
+			next_time = cur_time
+			return
+		end
+		love.timer.sleep(next_time - cur_time)
 	end
-	if lockfps then love.timer.sleep(next_time - cur_time) end
+end
+
+-- Use a more assumptive and non automatic screen clearing version of love.run
+function love.run()
+
+    math.randomseed(os.time())
+    math.random() math.random()
+
+    love.load(arg)
+
+    local dt = 0
+
+    -- Main loop time.
+    while true do
+        -- Process events.
+        if love.event then
+            love.event.pump()
+            for e,a,b,c,d in love.event.poll() do
+                if e == "quit" then
+                    if not love.quit or not love.quit() then
+                        if love.audio then
+                            love.audio.stop()
+                        end
+                        return
+                    end
+                end
+                love.handlers[e](a,b,c,d)
+            end
+        end
+
+        -- Update dt, as we'll be passing it to update
+        love.timer.step()
+        dt = love.timer.getDelta()
+
+        -- Call update and draw
+        love.update(dt) -- will pass 0 if love.timer is disabled
+        love.draw()
+
+        if love.timer then love.timer.sleep(0.001) end
+		if Screen.dirty then love.graphics.present() end
+		Screen.dirty = false
+    end
+
 end

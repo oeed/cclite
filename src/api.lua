@@ -190,8 +190,12 @@ function api.cclite.peripheralAttach( sSide, sType )
 	if api.cclite.peripherals[sSide] then
 		error("Peripheral already attached to " .. sSide,2)
 	end
-	api.cclite.peripherals[sSide] = peripheral[sType]()
-	table.insert(Emulator.eventQueue, {"peripheral",sSide})
+	api.cclite.peripherals[sSide] = peripheral[sType](sSide)
+	if api.cclite.peripherals[sSide] ~= nil then
+		table.insert(Emulator.eventQueue, {"peripheral",sSide})
+	else
+		error("No peripheral added",2)
+	end
 end
 function api.cclite.peripheralDetach( sSide )
 	if type(sSide) ~= "string" then error("Expected string",2) end
@@ -241,6 +245,7 @@ function api.term.clear()
 			Screen.textColourB[y][x] = 1 -- Don't need to bother setting text color
 		end
 	end
+	Screen.dirty = true
 end
 function api.term.clearLine()
 	for x = 1, Screen.width do
@@ -248,6 +253,7 @@ function api.term.clearLine()
 		Screen.backgroundColourB[api.term.cursorY][x] = api.term.bg
 		Screen.textColourB[api.term.cursorY][x] = 1 -- Don't need to bother setting text color
 	end
+	Screen.dirty = true
 end
 function api.term.getSize()
 	return Screen.width, Screen.height
@@ -259,6 +265,7 @@ function api.term.setCursorPos(x, y)
 	if not x or not y then return end
 	api.term.cursorX = math.floor(x)
 	api.term.cursorY = math.floor(y)
+	Screen.dirty = true
 end
 function api.term.write( text )
 	if not text then return end
@@ -275,10 +282,12 @@ function api.term.write( text )
 		end
 	end
 	api.term.cursorX = api.term.cursorX + #text
+	Screen.dirty = true
 end
 function api.term.setTextColor( num )
 	if not COLOUR_CODE[num] then return end
 	api.term.fg = num
+	Screen.dirty = true
 end
 function api.term.setBackgroundColor( num )
 	if not COLOUR_CODE[num] then return end
@@ -290,6 +299,7 @@ end
 function api.term.setCursorBlink( bool )
 	if type(bool) ~= "boolean" then error("Expected boolean",2) end
 	api.term.blink = bool
+	Screen.dirty = true
 end
 function api.term.scroll( n )
 	if type(n) ~= "number" then error("Expected number",2) end
@@ -323,6 +333,7 @@ function api.term.scroll( n )
 			end
 		end
 	end
+	Screen.dirty = true
 end
 
 api.os = {}

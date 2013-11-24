@@ -62,7 +62,7 @@ function peripheral.wiredModem()
 			if not remote[sSide] then error("No peripheral attached",2) end
 			return remote[sSide].call(sMethod, unpack(tArgs,3))
 		else
-			error("No such method " .. sMethod)
+			error("No such method " .. sMethod,2)
 		end
 	end
 	function obj.ccliteCall( sMethod, ... )
@@ -77,8 +77,9 @@ function peripheral.wiredModem()
 			end
 			local tmpobj = peripheral[sType]()
 			typeC[tmpobj.getType()] = (typeC[tmpobj.getType()] or -1) + 1
-			remote[tmpobj.getType() .. "_" .. tostring(typeC[tmpobj.getType()])] = tmpobj
-			table.insert(Emulator.eventQueue, {"peripheral",tmpobj.getType() .. "_" .. tostring(typeC[tmpobj.getType()])})
+			local sSide = tmpobj.getType() .. "_" .. tostring(typeC[tmpobj.getType()])
+			remote[sSide] = peripheral[sType](sSide) -- Is there any better way to do this than doing a double take?
+			table.insert(Emulator.eventQueue, {"peripheral",sSide})
 		elseif sMethod == "peripheralDetach" then
 			local sSide = unpack(tArgs)
 			if type(sSide) ~= "string" then error("Expected string",2) end
