@@ -164,6 +164,120 @@ local function FileBinaryWriteHandle( path, append )
 	return handle
 end
 
+local term = {}
+function term.clear()
+	for y = 1, Screen.height do
+		for x = 1, Screen.width do
+			Screen.textB[y][x] = " "
+			Screen.backgroundColourB[y][x] = api.term.bg
+			Screen.textColourB[y][x] = 1 -- Don't need to bother setting text color
+		end
+	end
+	Screen.dirty = true
+end
+function term.clearLine()
+	for x = 1, Screen.width do
+		Screen.textB[api.term.cursorY][x] = " "
+		Screen.backgroundColourB[api.term.cursorY][x] = api.term.bg
+		Screen.textColourB[api.term.cursorY][x] = 1 -- Don't need to bother setting text color
+	end
+	Screen.dirty = true
+end
+function term.getSize()
+	return Screen.width, Screen.height
+end
+function term.getCursorPos()
+	return api.term.cursorX, api.term.cursorY
+end
+function term.setCursorPos(x, y)
+	if not x or not y then return end
+	api.term.cursorX = math.floor(x)
+	api.term.cursorY = math.floor(y)
+	Screen.dirty = true
+end
+function term.write( text )
+	if not text then return end
+	if api.term.cursorY > Screen.height
+		or api.term.cursorY < 1 then return end
+
+	for i = 1, #text do
+		local char = string.sub( text, i, i )
+		if api.term.cursorX + i - 1 <= Screen.width
+			and api.term.cursorX + i - 1 >= 1 then
+			Screen.textB[api.term.cursorY][api.term.cursorX + i - 1] = char
+			Screen.textColourB[api.term.cursorY][api.term.cursorX + i - 1] = api.term.fg
+			Screen.backgroundColourB[api.term.cursorY][api.term.cursorX + i - 1] = api.term.bg
+		end
+	end
+	api.term.cursorX = api.term.cursorX + #text
+	Screen.dirty = true
+end
+function term.setTextColor( num )
+	if not COLOUR_CODE[num] then return end
+	api.term.fg = num
+	Screen.dirty = true
+end
+function term.setBackgroundColor( num )
+	if not COLOUR_CODE[num] then return end
+	api.term.bg = num
+end
+function term.isColor()
+	return true
+end
+function term.setCursorBlink( bool )
+	if type(bool) ~= "boolean" then error("Expected boolean",2) end
+	api.term.blink = bool
+	Screen.dirty = true
+end
+function term.scroll( n )
+	if type(n) ~= "number" then error("Expected number",2) end
+	local textBuffer = {}
+	local backgroundColourBuffer = {}
+	local textColourBuffer = {}
+	for y = 1, Screen.height do
+		if y - n > 0 and y - n <= Screen.height then
+			textBuffer[y - n] = {}
+			backgroundColourBuffer[y - n] = {}
+			textColourBuffer[y - n] = {}
+			for x = 1, Screen.width do
+				textBuffer[y - n][x] = Screen.textB[y][x]
+				backgroundColourBuffer[y - n][x] = Screen.backgroundColourB[y][x]
+				textColourBuffer[y - n][x] = Screen.textColourB[y][x]
+			end
+		end
+	end
+	for y = 1, Screen.height do
+		if textBuffer[y] ~= nil then
+			for x = 1, Screen.width do
+				Screen.textB[y][x] = textBuffer[y][x]
+				Screen.backgroundColourB[y][x] = backgroundColourBuffer[y][x]
+				Screen.textColourB[y][x] = textColourBuffer[y][x]
+			end
+		else
+			for x = 1, Screen.width do
+				Screen.textB[y][x] = " "
+				Screen.backgroundColourB[y][x] = api.term.bg
+				Screen.textColourB[y][x] = 1 -- Don't need to bother setting text color
+			end
+		end
+	end
+	Screen.dirty = true
+end
+
+function tablecopy(orig)
+    local orig_type = type(orig)
+    local copy
+    if orig_type == 'table' then
+        copy = {}
+        for orig_key, orig_value in pairs(orig) do
+            copy[orig_key] = orig_value
+        end
+    else
+        copy = orig
+    end
+    return copy
+end
+
 api = {}
 function api.init() -- Called after this file is loaded! Important. Else api.x is not defined
 	api.term = {
@@ -176,6 +290,147 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 	api.os = {
 		label = nil
 	}
+	api.env = {
+		_VERSION = "Luaj-jse 2.0.3",
+		tostring = tostring,
+		tonumber = tonumber,
+		unpack = unpack,
+		getfenv = getfenv,
+		setfenv = setfenv,
+		rawequal = rawequal,
+		rawset = rawset,
+		rawget = rawget,
+		setmetatable = setmetatable,
+		getmetatable = getmetatable,
+		next = next,
+		type = type,
+		select = select,
+		assert = assert,
+		error = error,
+
+		loadstring = function(str, source)
+			local f, err = loadstring(str, source)
+			if f then
+				setfenv(f, api.env)
+			end
+			return f, err
+		end,
+
+		math = tablecopy(math),
+		string = tablecopy(string),
+		table = table,
+		coroutine = coroutine,
+
+		-- CC apis (BIOS completes api.)
+		cclite = {
+			peripheralAttach = api.cclite.peripheralAttach,
+			peripheralDetach = api.cclite.peripheralDetach,
+			call = api.cclite.call,
+			log = print,
+		},
+		term = {
+			native = {
+				clear = term.clear,
+				clearLine = term.clearLine,
+				getSize = term.getSize,
+				getCursorPos = term.getCursorPos,
+				setCursorPos = term.setCursorPos,
+				setTextColor = term.setTextColor,
+				setTextColour = term.setTextColor,
+				setBackgroundColor = term.setBackgroundColor,
+				setBackgroundColour = term.setBackgroundColor,
+				setCursorBlink = term.setCursorBlink,
+				scroll = term.scroll,
+				write = term.write,
+				isColor = term.isColor,
+				isColour = term.isColor,
+			},
+			clear = term.clear,
+			clearLine = term.clearLine,
+			getSize = term.getSize,
+			getCursorPos = term.getCursorPos,
+			setCursorPos = term.setCursorPos,
+			setTextColor = term.setTextColor,
+			setTextColour = term.setTextColor,
+			setBackgroundColor = term.setBackgroundColor,
+			setBackgroundColour = term.setBackgroundColor,
+			setCursorBlink = term.setCursorBlink,
+			scroll = term.scroll,
+			write = term.write,
+			isColor = term.isColor,
+			isColour = term.isColor,
+		},
+		fs = {
+			open = api.fs.open,
+			list = api.fs.list,
+			exists = api.fs.exists,
+			isDir = api.fs.isDir,
+			isReadOnly = api.fs.isReadOnly,
+			getName = api.fs.getName,
+			getDrive = function(path) return nil end, -- Dummy function
+			getSize = api.fs.getSize,
+			getFreeSpace = api.fs.getFreeSpace,
+			makeDir = api.fs.makeDir,
+			move = api.fs.move,
+			copy = api.fs.copy,
+			delete = api.fs.delete,
+			combine = api.fs.combine,
+		},
+		os = {
+			clock = api.os.clock,
+			getComputerID = function() return 0 end,
+			computerID = function() return 0 end,
+			setComputerLabel = api.os.setComputerLabel,
+			getComputerLabel = api.os.getComputerLabel,
+			computerLabel = api.os.getComputerLabel,
+			queueEvent = api.os.queueEvent,
+			startTimer = api.os.startTimer,
+			setAlarm = api.os.setAlarm,
+			time = api.os.time,
+			day = api.os.day,
+			shutdown = api.os.shutdown,
+			reboot = api.os.reboot,
+		},
+		peripheral = {
+			isPresent = api.peripheral.isPresent,
+			getType = api.peripheral.getType,
+			getMethods = api.peripheral.getMethods,
+			call = api.peripheral.call,
+			getNames = api.peripheral.getNames,
+		},
+		http = {
+			request = api.http.request,
+		},
+		redstone = {
+			getSides = function() return {"top","bottom","left","right","front","back"} end,
+			getInput = function() end,
+			getOutput = function() end,
+			getBundledInput = function() end,
+			getBundledOutput = function() end,
+			getAnalogInput = function() end,
+			getAnalogOutput = function() end,
+			setOutput = function() end,
+			setBundledOutput = function() end,
+			setAnalogOutput = function() end,
+			testBundledInput = function() end,
+		},
+		bit = {
+			blshift = api.bit.blshift,
+			brshift = api.bit.brshift,
+			blogic_rshift = api.bit.blogic_rshift,
+			bxor = api.bit.bxor,
+			bor = api.bit.bor,
+			band = api.bit.band,
+			bnot = api.bit.bnot,
+		},
+	}
+	api.env.redstone.getAnalogueInput = api.env.redstone.getAnalogInput
+	api.env.redstone.getAnalogueOutput = api.env.redstone.getAnalogOutput
+	api.env.redstone.setAnalogueOutput = api.env.redstone.setAnalogOutput
+	api.env.rs = api.env.redstone
+	api.env.math.mod = nil
+	api.env.string.gfind = nil
+	api.env._G = api.env
 end
 
 api.cclite = {}
@@ -234,106 +489,6 @@ function api.http.request( sUrl, sParams )
     end
 
     http.send(sParams)
-end
-
-api.term = {}
-function api.term.clear()
-	for y = 1, Screen.height do
-		for x = 1, Screen.width do
-			Screen.textB[y][x] = " "
-			Screen.backgroundColourB[y][x] = api.term.bg
-			Screen.textColourB[y][x] = 1 -- Don't need to bother setting text color
-		end
-	end
-	Screen.dirty = true
-end
-function api.term.clearLine()
-	for x = 1, Screen.width do
-		Screen.textB[api.term.cursorY][x] = " "
-		Screen.backgroundColourB[api.term.cursorY][x] = api.term.bg
-		Screen.textColourB[api.term.cursorY][x] = 1 -- Don't need to bother setting text color
-	end
-	Screen.dirty = true
-end
-function api.term.getSize()
-	return Screen.width, Screen.height
-end
-function api.term.getCursorPos()
-	return api.term.cursorX, api.term.cursorY
-end
-function api.term.setCursorPos(x, y)
-	if not x or not y then return end
-	api.term.cursorX = math.floor(x)
-	api.term.cursorY = math.floor(y)
-	Screen.dirty = true
-end
-function api.term.write( text )
-	if not text then return end
-	if api.term.cursorY > Screen.height
-		or api.term.cursorY < 1 then return end
-
-	for i = 1, #text do
-		local char = string.sub( text, i, i )
-		if api.term.cursorX + i - 1 <= Screen.width
-			and api.term.cursorX + i - 1 >= 1 then
-			Screen.textB[api.term.cursorY][api.term.cursorX + i - 1] = char
-			Screen.textColourB[api.term.cursorY][api.term.cursorX + i - 1] = api.term.fg
-			Screen.backgroundColourB[api.term.cursorY][api.term.cursorX + i - 1] = api.term.bg
-		end
-	end
-	api.term.cursorX = api.term.cursorX + #text
-	Screen.dirty = true
-end
-function api.term.setTextColor( num )
-	if not COLOUR_CODE[num] then return end
-	api.term.fg = num
-	Screen.dirty = true
-end
-function api.term.setBackgroundColor( num )
-	if not COLOUR_CODE[num] then return end
-	api.term.bg = num
-end
-function api.term.isColor()
-	return true
-end
-function api.term.setCursorBlink( bool )
-	if type(bool) ~= "boolean" then error("Expected boolean",2) end
-	api.term.blink = bool
-	Screen.dirty = true
-end
-function api.term.scroll( n )
-	if type(n) ~= "number" then error("Expected number",2) end
-	local textBuffer = {}
-	local backgroundColourBuffer = {}
-	local textColourBuffer = {}
-	for y = 1, Screen.height do
-		if y - n > 0 and y - n <= Screen.height then
-			textBuffer[y - n] = {}
-			backgroundColourBuffer[y - n] = {}
-			textColourBuffer[y - n] = {}
-			for x = 1, Screen.width do
-				textBuffer[y - n][x] = Screen.textB[y][x]
-				backgroundColourBuffer[y - n][x] = Screen.backgroundColourB[y][x]
-				textColourBuffer[y - n][x] = Screen.textColourB[y][x]
-			end
-		end
-	end
-	for y = 1, Screen.height do
-		if textBuffer[y] ~= nil then
-			for x = 1, Screen.width do
-				Screen.textB[y][x] = textBuffer[y][x]
-				Screen.backgroundColourB[y][x] = backgroundColourBuffer[y][x]
-				Screen.textColourB[y][x] = textColourBuffer[y][x]
-			end
-		else
-			for x = 1, Screen.width do
-				Screen.textB[y][x] = " "
-				Screen.backgroundColourB[y][x] = api.term.bg
-				Screen.textColourB[y][x] = 1 -- Don't need to bother setting text color
-			end
-		end
-	end
-	Screen.dirty = true
 end
 
 api.os = {}
@@ -637,158 +792,3 @@ end
 function api.bit.bnot( n )
 	return api.bit.norm(bit.bnot(n))
 end
-
-function tablecopy(orig)
-    local orig_type = type(orig)
-    local copy
-    if orig_type == 'table' then
-        copy = {}
-        for orig_key, orig_value in pairs(orig) do
-            copy[orig_key] = orig_value
-        end
-    else
-        copy = orig
-    end
-    return copy
-end
-
-api.env = {
-	_VERSION = "Luaj-jse 2.0.3",
-	tostring = tostring,
-	tonumber = tonumber,
-	unpack = unpack,
-	getfenv = getfenv,
-	setfenv = setfenv,
-	rawequal = rawequal,
-	rawset = rawset,
-	rawget = rawget,
-	setmetatable = setmetatable,
-	getmetatable = getmetatable,
-	next = next,
-	type = type,
-	select = select,
-	assert = assert,
-	error = error,
-
-	loadstring = function(str, source)
-		local f, err = loadstring(str, source)
-		if f then
-			setfenv(f, api.env)
-		end
-		return f, err
-	end,
-
-	math = tablecopy(math),
-	string = tablecopy(string),
-	table = table,
-	coroutine = coroutine,
-
-	-- CC apis (BIOS completes api.)
-	cclite = {
-		peripheralAttach = api.cclite.peripheralAttach,
-		peripheralDetach = api.cclite.peripheralDetach,
-		call = api.cclite.call,
-		log = print,
-	},
-	term = {
-		native = {
-			clear = api.term.clear,
-			clearLine = api.term.clearLine,
-			getSize = api.term.getSize,
-			getCursorPos = api.term.getCursorPos,
-			setCursorPos = api.term.setCursorPos,
-			setTextColor = api.term.setTextColor,
-			setTextColour = api.term.setTextColor,
-			setBackgroundColor = api.term.setBackgroundColor,
-			setBackgroundColour = api.term.setBackgroundColor,
-			setCursorBlink = api.term.setCursorBlink,
-			scroll = api.term.scroll,
-			write = api.term.write,
-			isColor = api.term.isColor,
-			isColour = api.term.isColor,
-		},
-		clear = api.term.clear,
-		clearLine = api.term.clearLine,
-		getSize = api.term.getSize,
-		getCursorPos = api.term.getCursorPos,
-		setCursorPos = api.term.setCursorPos,
-		setTextColor = api.term.setTextColor,
-		setTextColour = api.term.setTextColor,
-		setBackgroundColor = api.term.setBackgroundColor,
-		setBackgroundColour = api.term.setBackgroundColor,
-		setCursorBlink = api.term.setCursorBlink,
-		scroll = api.term.scroll,
-		write = api.term.write,
-		isColor = api.term.isColor,
-		isColour = api.term.isColor,
-	},
-	fs = {
-		open = api.fs.open,
-		list = api.fs.list,
-		exists = api.fs.exists,
-		isDir = api.fs.isDir,
-		isReadOnly = api.fs.isReadOnly,
-		getName = api.fs.getName,
-		getDrive = function(path) return nil end, -- Dummy function
-		getSize = api.fs.getSize,
-		getFreeSpace = api.fs.getFreeSpace,
-		makeDir = api.fs.makeDir,
-		move = api.fs.move,
-		copy = api.fs.copy,
-		delete = api.fs.delete,
-		combine = api.fs.combine,
-	},
-	os = {
-		clock = api.os.clock,
-		getComputerID = function() return 0 end,
-		computerID = function() return 0 end,
-		setComputerLabel = api.os.setComputerLabel,
-		getComputerLabel = api.os.getComputerLabel,
-		computerLabel = api.os.getComputerLabel,
-		queueEvent = api.os.queueEvent,
-		startTimer = api.os.startTimer,
-		setAlarm = api.os.setAlarm,
-		time = api.os.time,
-		day = api.os.day,
-		shutdown = api.os.shutdown,
-		reboot = api.os.reboot,
-	},
-	peripheral = {
-		isPresent = api.peripheral.isPresent,
-		getType = api.peripheral.getType,
-		getMethods = api.peripheral.getMethods,
-		call = api.peripheral.call,
-		getNames = api.peripheral.getNames,
-	},
-	http = {
-		request = api.http.request,
-	},
-	redstone = {
-		getSides = function() return {"top","bottom","left","right","front","back"} end,
-		getInput = function() end,
-		getOutput = function() end,
-		getBundledInput = function() end,
-		getBundledOutput = function() end,
-		getAnalogInput = function() end,
-		getAnalogOutput = function() end,
-		setOutput = function() end,
-		setBundledOutput = function() end,
-		setAnalogOutput = function() end,
-		testBundledInput = function() end,
-	},
-	bit = {
-		blshift = api.bit.blshift,
-		brshift = api.bit.brshift,
-		blogic_rshift = api.bit.blogic_rshift,
-		bxor = api.bit.bxor,
-		bor = api.bit.bor,
-		band = api.bit.band,
-		bnot = api.bit.bnot,
-	},
-}
-api.env.redstone.getAnalogueInput = api.env.redstone.getAnalogInput
-api.env.redstone.getAnalogueOutput = api.env.redstone.getAnalogOutput
-api.env.redstone.setAnalogueOutput = api.env.redstone.setAnalogOutput
-api.env.rs = api.env.redstone
-api.env.math.mod = nil
-api.env.string.gfind = nil
