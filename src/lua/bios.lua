@@ -1,3 +1,5 @@
+
+--[[
 -- Install safe versions of various library functions
 -- These will not put cfunctions on the stack, so don't break serialisation
 xpcall = function( _fn, _fnErrorHandler )
@@ -88,7 +90,7 @@ function string.gmatch( _s, _pattern )
 		return string.match( _s, _pattern, nFirst )
 	end
 end
-
+]]
 
 local nativesetmetatable = setmetatable
 function setmetatable( _o, _t )

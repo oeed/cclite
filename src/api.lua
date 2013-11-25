@@ -164,72 +164,74 @@ local function FileBinaryWriteHandle( path, append )
 	return handle
 end
 
-local term = {}
-function term.clear()
+api = {}
+
+api.term = {}
+function api.term.clear()
 	for y = 1, Screen.height do
 		for x = 1, Screen.width do
 			Screen.textB[y][x] = " "
-			Screen.backgroundColourB[y][x] = api.term.bg
+			Screen.backgroundColourB[y][x] = api.comp.bg
 			Screen.textColourB[y][x] = 1 -- Don't need to bother setting text color
 		end
 	end
 	Screen.dirty = true
 end
-function term.clearLine()
+function api.term.clearLine()
 	for x = 1, Screen.width do
-		Screen.textB[api.term.cursorY][x] = " "
-		Screen.backgroundColourB[api.term.cursorY][x] = api.term.bg
-		Screen.textColourB[api.term.cursorY][x] = 1 -- Don't need to bother setting text color
+		Screen.textB[api.comp.cursorY][x] = " "
+		Screen.backgroundColourB[api.comp.cursorY][x] = api.comp.bg
+		Screen.textColourB[api.comp.cursorY][x] = 1 -- Don't need to bother setting text color
 	end
 	Screen.dirty = true
 end
-function term.getSize()
+function api.term.getSize()
 	return Screen.width, Screen.height
 end
-function term.getCursorPos()
-	return api.term.cursorX, api.term.cursorY
+function api.term.getCursorPos()
+	return api.comp.cursorX, api.comp.cursorY
 end
-function term.setCursorPos(x, y)
+function api.term.setCursorPos(x, y)
 	if not x or not y then return end
-	api.term.cursorX = math.floor(x)
-	api.term.cursorY = math.floor(y)
+	api.comp.cursorX = math.floor(x)
+	api.comp.cursorY = math.floor(y)
 	Screen.dirty = true
 end
-function term.write( text )
+function api.term.write( text )
 	if not text then return end
-	if api.term.cursorY > Screen.height
-		or api.term.cursorY < 1 then return end
+	if api.comp.cursorY > Screen.height
+		or api.comp.cursorY < 1 then return end
 
 	for i = 1, #text do
 		local char = string.sub( text, i, i )
-		if api.term.cursorX + i - 1 <= Screen.width
-			and api.term.cursorX + i - 1 >= 1 then
-			Screen.textB[api.term.cursorY][api.term.cursorX + i - 1] = char
-			Screen.textColourB[api.term.cursorY][api.term.cursorX + i - 1] = api.term.fg
-			Screen.backgroundColourB[api.term.cursorY][api.term.cursorX + i - 1] = api.term.bg
+		if api.comp.cursorX + i - 1 <= Screen.width
+			and api.comp.cursorX + i - 1 >= 1 then
+			Screen.textB[api.comp.cursorY][api.comp.cursorX + i - 1] = char
+			Screen.textColourB[api.comp.cursorY][api.comp.cursorX + i - 1] = api.comp.fg
+			Screen.backgroundColourB[api.comp.cursorY][api.comp.cursorX + i - 1] = api.comp.bg
 		end
 	end
-	api.term.cursorX = api.term.cursorX + #text
+	api.comp.cursorX = api.comp.cursorX + #text
 	Screen.dirty = true
 end
-function term.setTextColor( num )
+function api.term.setTextColor( num )
 	if not COLOUR_CODE[num] then return end
-	api.term.fg = num
+	api.comp.fg = num
 	Screen.dirty = true
 end
-function term.setBackgroundColor( num )
+function api.term.setBackgroundColor( num )
 	if not COLOUR_CODE[num] then return end
-	api.term.bg = num
+	api.comp.bg = num
 end
-function term.isColor()
+function api.term.isColor()
 	return true
 end
-function term.setCursorBlink( bool )
+function api.term.setCursorBlink( bool )
 	if type(bool) ~= "boolean" then error("Expected boolean",2) end
-	api.term.blink = bool
+	api.comp.blink = bool
 	Screen.dirty = true
 end
-function term.scroll( n )
+function api.term.scroll( n )
 	if type(n) ~= "number" then error("Expected number",2) end
 	local textBuffer = {}
 	local backgroundColourBuffer = {}
@@ -256,7 +258,7 @@ function term.scroll( n )
 		else
 			for x = 1, Screen.width do
 				Screen.textB[y][x] = " "
-				Screen.backgroundColourB[y][x] = api.term.bg
+				Screen.backgroundColourB[y][x] = api.comp.bg
 				Screen.textColourB[y][x] = 1 -- Don't need to bother setting text color
 			end
 		end
@@ -276,161 +278,6 @@ function tablecopy(orig)
         copy = orig
     end
     return copy
-end
-
-api = {}
-function api.init() -- Called after this file is loaded! Important. Else api.x is not defined
-	api.term = {
-		cursorX = 1,
-		cursorY = 1,
-		bg = 32768,
-		fg = 1,
-		blink = false,
-	}
-	api.os = {
-		label = nil
-	}
-	api.env = {
-		_VERSION = "Luaj-jse 2.0.3",
-		tostring = tostring,
-		tonumber = tonumber,
-		unpack = unpack,
-		getfenv = getfenv,
-		setfenv = setfenv,
-		rawequal = rawequal,
-		rawset = rawset,
-		rawget = rawget,
-		setmetatable = setmetatable,
-		getmetatable = getmetatable,
-		next = next,
-		type = type,
-		select = select,
-		assert = assert,
-		error = error,
-
-		loadstring = function(str, source)
-			local f, err = loadstring(str, source)
-			if f then
-				setfenv(f, api.env)
-			end
-			return f, err
-		end,
-
-		math = tablecopy(math),
-		string = tablecopy(string),
-		table = table,
-		coroutine = coroutine,
-
-		-- CC apis (BIOS completes api.)
-		cclite = {
-			peripheralAttach = api.cclite.peripheralAttach,
-			peripheralDetach = api.cclite.peripheralDetach,
-			call = api.cclite.call,
-			log = print,
-		},
-		term = {
-			native = {
-				clear = term.clear,
-				clearLine = term.clearLine,
-				getSize = term.getSize,
-				getCursorPos = term.getCursorPos,
-				setCursorPos = term.setCursorPos,
-				setTextColor = term.setTextColor,
-				setTextColour = term.setTextColor,
-				setBackgroundColor = term.setBackgroundColor,
-				setBackgroundColour = term.setBackgroundColor,
-				setCursorBlink = term.setCursorBlink,
-				scroll = term.scroll,
-				write = term.write,
-				isColor = term.isColor,
-				isColour = term.isColor,
-			},
-			clear = term.clear,
-			clearLine = term.clearLine,
-			getSize = term.getSize,
-			getCursorPos = term.getCursorPos,
-			setCursorPos = term.setCursorPos,
-			setTextColor = term.setTextColor,
-			setTextColour = term.setTextColor,
-			setBackgroundColor = term.setBackgroundColor,
-			setBackgroundColour = term.setBackgroundColor,
-			setCursorBlink = term.setCursorBlink,
-			scroll = term.scroll,
-			write = term.write,
-			isColor = term.isColor,
-			isColour = term.isColor,
-		},
-		fs = {
-			open = api.fs.open,
-			list = api.fs.list,
-			exists = api.fs.exists,
-			isDir = api.fs.isDir,
-			isReadOnly = api.fs.isReadOnly,
-			getName = api.fs.getName,
-			getDrive = function(path) return nil end, -- Dummy function
-			getSize = api.fs.getSize,
-			getFreeSpace = api.fs.getFreeSpace,
-			makeDir = api.fs.makeDir,
-			move = api.fs.move,
-			copy = api.fs.copy,
-			delete = api.fs.delete,
-			combine = api.fs.combine,
-		},
-		os = {
-			clock = api.os.clock,
-			getComputerID = function() return 0 end,
-			computerID = function() return 0 end,
-			setComputerLabel = api.os.setComputerLabel,
-			getComputerLabel = api.os.getComputerLabel,
-			computerLabel = api.os.getComputerLabel,
-			queueEvent = api.os.queueEvent,
-			startTimer = api.os.startTimer,
-			setAlarm = api.os.setAlarm,
-			time = api.os.time,
-			day = api.os.day,
-			shutdown = api.os.shutdown,
-			reboot = api.os.reboot,
-		},
-		peripheral = {
-			isPresent = api.peripheral.isPresent,
-			getType = api.peripheral.getType,
-			getMethods = api.peripheral.getMethods,
-			call = api.peripheral.call,
-			getNames = api.peripheral.getNames,
-		},
-		http = {
-			request = api.http.request,
-		},
-		redstone = {
-			getSides = function() return {"top","bottom","left","right","front","back"} end,
-			getInput = function() end,
-			getOutput = function() end,
-			getBundledInput = function() end,
-			getBundledOutput = function() end,
-			getAnalogInput = function() end,
-			getAnalogOutput = function() end,
-			setOutput = function() end,
-			setBundledOutput = function() end,
-			setAnalogOutput = function() end,
-			testBundledInput = function() end,
-		},
-		bit = {
-			blshift = api.bit.blshift,
-			brshift = api.bit.brshift,
-			blogic_rshift = api.bit.blogic_rshift,
-			bxor = api.bit.bxor,
-			bor = api.bit.bor,
-			band = api.bit.band,
-			bnot = api.bit.bnot,
-		},
-	}
-	api.env.redstone.getAnalogueInput = api.env.redstone.getAnalogInput
-	api.env.redstone.getAnalogueOutput = api.env.redstone.getAnalogOutput
-	api.env.redstone.setAnalogueOutput = api.env.redstone.setAnalogOutput
-	api.env.rs = api.env.redstone
-	api.env.math.mod = nil
-	api.env.string.gfind = nil
-	api.env._G = api.env
 end
 
 api.cclite = {}
@@ -503,10 +350,10 @@ function api.os.day()
 end
 function api.os.setComputerLabel(label)
 	if type(label) ~= "string" and type(label) ~= "nil" then error("Expected string or nil",2) end
-	api.os.label = label
+	api.comp.label = label
 end
 function api.os.getComputerLabel()
-	return api.os.label
+	return api.comp.label
 end
 function api.os.queueEvent( ... )
 	local event = { ... }
@@ -846,4 +693,159 @@ function api.bit.band( m, n )
 end
 function api.bit.bnot( n )
 	return api.bit.norm(bit.bnot(n))
+end
+
+function api.init() -- Called after this file is loaded! Important. Else api.x is not defined
+	api.comp = {
+		cursorX = 1,
+		cursorY = 1,
+		bg = 32768,
+		fg = 1,
+		blink = false,
+		label = nil,
+	}
+	api.env = {
+		_VERSION = "Luaj-jse 2.0.3",
+		tostring = tostring,
+		tonumber = tonumber,
+		unpack = unpack,
+		getfenv = getfenv,
+		setfenv = setfenv,
+		rawequal = rawequal,
+		rawset = rawset,
+		rawget = rawget,
+		setmetatable = setmetatable,
+		getmetatable = getmetatable,
+		next = next,
+		type = type,
+		select = select,
+		assert = assert,
+		error = error,
+		ipairs = ipairs,
+		pairs = pairs,
+		pcall = pcall,
+
+		loadstring = function(str, source)
+			local f, err = loadstring(str, source)
+			if f then
+				setfenv(f, api.env)
+			end
+			return f, err
+		end,
+
+		math = tablecopy(math),
+		string = tablecopy(string),
+		table = table,
+		coroutine = coroutine,
+
+		-- CC apis (BIOS completes api.)
+		cclite = {
+			peripheralAttach = api.cclite.peripheralAttach,
+			peripheralDetach = api.cclite.peripheralDetach,
+			call = api.cclite.call,
+			log = print,
+		},
+		term = {
+			native = {
+				clear = api.term.clear,
+				clearLine = api.term.clearLine,
+				getSize = api.term.getSize,
+				getCursorPos = api.term.getCursorPos,
+				setCursorPos = api.term.setCursorPos,
+				setTextColor = api.term.setTextColor,
+				setTextColour = api.term.setTextColor,
+				setBackgroundColor = api.term.setBackgroundColor,
+				setBackgroundColour = api.term.setBackgroundColor,
+				setCursorBlink = api.term.setCursorBlink,
+				scroll = api.term.scroll,
+				write = api.term.write,
+				isColor = api.term.isColor,
+				isColour = api.term.isColor,
+			},
+			clear = api.term.clear,
+			clearLine = api.term.clearLine,
+			getSize = api.term.getSize,
+			getCursorPos = api.term.getCursorPos,
+			setCursorPos = api.term.setCursorPos,
+			setTextColor = api.term.setTextColor,
+			setTextColour = api.term.setTextColor,
+			setBackgroundColor = api.term.setBackgroundColor,
+			setBackgroundColour = api.term.setBackgroundColor,
+			setCursorBlink = api.term.setCursorBlink,
+			scroll = api.term.scroll,
+			write = api.term.write,
+			isColor = api.term.isColor,
+			isColour = api.term.isColor,
+		},
+		fs = {
+			open = api.fs.open,
+			list = api.fs.list,
+			exists = api.fs.exists,
+			isDir = api.fs.isDir,
+			isReadOnly = api.fs.isReadOnly,
+			getName = api.fs.getName,
+			getDrive = function(path) return nil end, -- Dummy function
+			getSize = api.fs.getSize,
+			getFreeSpace = api.fs.getFreeSpace,
+			makeDir = api.fs.makeDir,
+			move = api.fs.move,
+			copy = api.fs.copy,
+			delete = api.fs.delete,
+			combine = api.fs.combine,
+		},
+		os = {
+			clock = api.os.clock,
+			getComputerID = function() return 0 end,
+			computerID = function() return 0 end,
+			setComputerLabel = api.os.setComputerLabel,
+			getComputerLabel = api.os.getComputerLabel,
+			computerLabel = api.os.getComputerLabel,
+			queueEvent = api.os.queueEvent,
+			startTimer = api.os.startTimer,
+			setAlarm = api.os.setAlarm,
+			time = api.os.time,
+			day = api.os.day,
+			shutdown = api.os.shutdown,
+			reboot = api.os.reboot,
+		},
+		peripheral = {
+			isPresent = api.peripheral.isPresent,
+			getType = api.peripheral.getType,
+			getMethods = api.peripheral.getMethods,
+			call = api.peripheral.call,
+			getNames = api.peripheral.getNames,
+		},
+		http = {
+			request = api.http.request,
+		},
+		redstone = {
+			getSides = function() return {"top","bottom","left","right","front","back"} end,
+			getInput = function() end,
+			getOutput = function() end,
+			getBundledInput = function() end,
+			getBundledOutput = function() end,
+			getAnalogInput = function() end,
+			getAnalogOutput = function() end,
+			setOutput = function() end,
+			setBundledOutput = function() end,
+			setAnalogOutput = function() end,
+			testBundledInput = function() end,
+		},
+		bit = {
+			blshift = api.bit.blshift,
+			brshift = api.bit.brshift,
+			blogic_rshift = api.bit.blogic_rshift,
+			bxor = api.bit.bxor,
+			bor = api.bit.bor,
+			band = api.bit.band,
+			bnot = api.bit.bnot,
+		},
+	}
+	api.env.redstone.getAnalogueInput = api.env.redstone.getAnalogInput
+	api.env.redstone.getAnalogueOutput = api.env.redstone.getAnalogOutput
+	api.env.redstone.setAnalogueOutput = api.env.redstone.setAnalogOutput
+	api.env.rs = api.env.redstone
+	api.env.math.mod = nil
+	api.env.string.gfind = nil
+	api.env._G = api.env
 end

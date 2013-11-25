@@ -237,7 +237,7 @@ function love.update(dt)
 			Emulator:stop( true )
 		end)
 
-	if api.term.blink then
+	if api.comp.blink then
 		if Screen.lastCursor == nil then
 			Screen.lastCursor = now
 		end

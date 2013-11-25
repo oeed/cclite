@@ -82,6 +82,9 @@ end
 
 function Screen:draw()
 	if not Emulator.running then
+		lsetCol({0,0,0})
+		ldrawRect("fill", 0, 0, self.width * self.pixelWidth, self.height * self.pixelHeight )
+		lsetCol({240, 240, 240})
 		local text = "Press any key..."
 		lprint(text, ((self.width * self.pixelWidth) / 2) - (font:getWidth(text) / 2), (self.height * self.pixelHeight) / 2)
 		return
@@ -119,9 +122,9 @@ function Screen:draw()
 		end
 	end
 
-	if api.term.blink and self.showCursor then
+	if api.comp.blink and self.showCursor then
 		local offset = self.pixelWidth / 2 - self.font:getWidth("_") / 2
-		setColor(COLOUR_CODE[ api.term.fg ])
-		lprint("_", (api.term.cursorX - 1) * self.pixelWidth + offset, (api.term.cursorY - 1) * self.pixelHeight + self.textOffset)
+		setColor(COLOUR_CODE[ api.comp.fg ])
+		lprint("_", (api.comp.cursorX - 1) * self.pixelWidth + offset, (api.comp.cursorY - 1) * self.pixelHeight + self.textOffset)
 	end
 end
