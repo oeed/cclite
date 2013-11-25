@@ -577,10 +577,30 @@ function api.peripheral.getNames()
 end
 
 api.fs = {}
+function api.fs.combine(basePath, localPath)
+	if type(basePath) ~= "string" or type(localPath) ~= "string" then
+		error("Expected string, string",2)
+	end
+	local path = "/" .. basePath .. "/" .. localPath
+	local tPath = {}
+	for part in path:gmatch("[^/]+") do
+   		if part ~= "" and part ~= "." then
+   			if part == ".." and #tPath > 0 then
+   				table.remove(tPath)
+   			else
+   				table.insert(tPath, part)
+   			end
+   		end
+	end
+	return table.concat(tPath, "/")
+end
+
 function api.fs.open(path, mode)
 	if type(path) ~= "string" or type(mode) ~= "string" then
 		error("Expected string, string",2)
 	end
+	local testpath = api.fs.combine("data/", path)
+	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	path = api.fs.combine("", path)
 	if mode == "r" then
 		local sPath = nil
@@ -607,6 +627,8 @@ function api.fs.list(path)
 	if type(path) ~= "string" then
 		error("Expected string",2)
 	end
+	local testpath = api.fs.combine("data/", path)
+	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	path = api.fs.combine("", path)
 	local res = {}
 	if love.filesystem.exists("data/" .. path) then -- This path takes precedence
@@ -623,6 +645,8 @@ function api.fs.exists(path)
 	if type(path) ~= "string" then
 		error("Expected string",2)
 	end
+	local testpath = api.fs.combine("data/", path)
+	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then return false end
 	path = api.fs.combine("", path)
 	if path == "bios.lua" then return false end
 	return love.filesystem.exists("data/" .. path) or love.filesystem.exists("lua/" .. path)
@@ -631,6 +655,8 @@ function api.fs.isDir(path)
 	if type(path) ~= "string" then
 		error("Expected string",2)
 	end
+	local testpath = api.fs.combine("data/", path)
+	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then return false end
 	path = api.fs.combine("", path)
 	return love.filesystem.isDirectory("data/" .. path) or love.filesystem.isDirectory("lua/" .. path)
 end
@@ -639,7 +665,7 @@ function api.fs.isReadOnly(path)
 		error("Expected string",2)
 	end
 	path = api.fs.combine("", path)
-	return string.sub(path, 1, 4) == "rom/"
+	return path == "rom" or string.sub(path, 1, 4) == "rom/"
 end
 function api.fs.getName(path)
 	if type(path) ~= "string" then
@@ -652,6 +678,8 @@ function api.fs.getSize(path)
 	if type(path) ~= "string" then
 		error("Expected string",2)
 	end
+	local testpath = api.fs.combine("data/", path)
+	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	path = api.fs.combine("", path)
 	if api.fs.exists(path) ~= true then
 		error("No such file",2)
@@ -664,7 +692,13 @@ function api.fs.getSize(path)
 		sPath = "lua/" .. path
 	end
 
-	local _, size = love.filesystem.read( sPath )
+	if love.filesystem.isDirectory( sPath ) then
+		return 512
+	end
+	
+	local File = love.filesystem.newFile( sPath, "r" )
+	local size = File:getSize()
+	File:close()
 	if size == 0 then size = 512 end
 	return math.ceil(size/512)*512
 end
@@ -677,93 +711,109 @@ function api.fs.makeDir(path) -- All write functions are within data/
 	if type(path) ~= "string" then
 		error("Expected string",2)
 	end
+	local testpath = api.fs.combine("data/", path)
+	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	path = api.fs.combine("", path)
-	if string.sub(path, 1, 4) ~= "rom/" then -- Stop user overwriting lua/rom/ with data/rom/
-		return love.filesystem.mkdir( "data/" .. path )
-	else
-		return nil
+	if path == "rom" or string.sub(path, 1, 4) == "rom/" then
+		error("Access Denied",2)
 	end
-end
-function api.fs.move(fromPath, toPath)
-	if type(fromPath) ~= "string" or type(toPath) ~= "string" then
-		error("Expected string, string",2)
-	end
-	-- Not implemented
+	return love.filesystem.mkdir( "data/" .. path )
 end
 
 local function deltree(sFolder)
 	local tObjects = love.filesystem.enumerate(sFolder)
 
 	if tObjects then
-   		for nIndex, sObject in pairs(tObjects) do
+   		for _, sObject in pairs(tObjects) do
 	   		local pObject =  sFolder.."/"..sObject
 
-			if love.filesystem.isFile(pObject) then
-				love.filesystem.remove(pObject)
-			elseif love.filesystem.isDirectory(pObject) then
+			if love.filesystem.isDirectory(pObject) then
 				deltree(pObject)
 			end
+			love.filesystem.remove(pObject)
 		end
 	end
 	return love.filesystem.remove(sFolder)
 end
 
 local function copytree(sFolder, sToFolder)
-	deltree(sToFolder) -- Overwrite existing file for both copy and move
-	-- Is this vanilla behaviour or does it merge files?
 	if not love.filesystem.isDirectory(sFolder) then
 		love.filesystem.write(sToFolder, love.filesystem.read( sFolder ))
+		return
 	end
+	love.filesystem.mkdir(sToFolder)
 	local tObjects = love.filesystem.enumerate(sFolder)
 
 	if tObjects then
-   		for nIndex, sObject in pairs(tObjects) do
+   		for _, sObject in pairs(tObjects) do
 	   		local pObject =  sFolder.."/"..sObject
+			local pToObject = sToFolder.."/"..sObject
 
-			if love.filesystem.isFile(pObject) then
-				love.filesystem.write(sToFolder .. "/" .. sObject, love.filesystem.read( pObject ))
-			elseif love.filesystem.isDirectory(pObject) then
-				copytree(pObject)
+			if love.filesystem.isDirectory(pObject) then
+				love.filesystem.mkdir(pToObject)
+				copytree(pObject,pToObject)
+			else
+				love.filesystem.write(pToObject, love.filesystem.read( pObject ))
 			end
 		end
 	end
+end
+
+function api.fs.move(fromPath, toPath)
+	if type(fromPath) ~= "string" or type(toPath) ~= "string" then
+		error("Expected string, string",2)
+	end
+	local testpath = api.fs.combine("data/", fromPath)
+	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
+	local testpath = api.fs.combine("data/", toPath)
+	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
+	fromPath = api.fs.combine("", fromPath)
+	toPath = api.fs.combine("", toPath)
+	if api.fs.exists(fromPath) ~= true then
+		error("No such file",2)
+	end
+	if api.fs.exists(toPath) == true then
+		error("File exists",2)
+	end
+	if fromPath == "rom" or string.sub(fromPath, 1, 4) == "rom/" or 
+		toPath == "rom" or string.sub(toPath, 1, 4) == "rom/" then
+		error("Access Deined",2)
+	end
+	copytree("data/" .. fromPath, "data/" .. toPath)
+	deltree( "data/" .. fromPath )
 end
 
 function api.fs.copy(fromPath, toPath)
 	if type(fromPath) ~= "string" or type(toPath) ~= "string" then
 		error("Expected string, string",2)
 	end
+	local testpath = api.fs.combine("data/", fromPath)
+	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
+	local testpath = api.fs.combine("data/", toPath)
+	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	fromPath = api.fs.combine("", fromPath)
 	toPath = api.fs.combine("", toPath)
-	if string.sub(toPath, 1, 4) ~= "rom/" then -- Stop user overwriting lua/rom/ with data/rom/
-		return copytree("data/" .. fromPath, "data/" .. toPath)
-	else return nil end
+	if api.fs.exists(fromPath) ~= true then
+		error("No such file",2)
+	end
+	if api.fs.exists(toPath) == true then
+		error("File exists",2)
+	end
+	if toPath == "rom" or string.sub(toPath, 1, 4) == "rom/" then
+		error("Access Deined",2)
+	end
+	copytree("data/" .. fromPath, "data/" .. toPath)
 end
 
 function api.fs.delete(path)
 	if type(path) ~= "string" then error("Expected string",2) end
+	local testpath = api.fs.combine("data/", path)
+	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	path = api.fs.combine("", path)
-	if string.sub(path, 1, 4) ~= "rom/" then -- Stop user overwriting lua/rom/ with data/rom/
-		return deltree( "data/" .. path )
-	else return nil end
-end
-
-function api.fs.combine(basePath, localPath)
-	if type(basePath) ~= "string" or type(localPath) ~= "string" then
-		error("Expected string, string",2)
+	if path == "rom" or string.sub(path, 1, 4) == "rom/" then
+		error("Access Deined",2)
 	end
-	local path = "/" .. basePath .. "/" .. localPath
-	local tPath = {}
-	for part in path:gmatch("[^/]+") do
-   		if part ~= "" and part ~= "." then
-   			if part == ".." and #tPath > 0 then
-   				table.remove(tPath)
-   			else
-   				table.insert(tPath, part)
-   			end
-   		end
-	end
-	return table.concat(tPath, "/")
+	deltree( "data/" .. path )
 end
 
 api.bit = {}
