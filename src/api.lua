@@ -1,11 +1,7 @@
 --[[
 	TODO
-	HTTP api?
-	the rest of fs api!
+	HTTP api may be broken?
 	including file handles.
-	os.day
-	os.time
-	writeLine!
 ]]
 -- HELPER FUNCTIONS
 local function lines(str)
@@ -54,7 +50,11 @@ local function HTTPHandle(contents, status)
 	return handle
 end
 
-local function FileReadHandle( contents )
+local function FileReadHandle( path )
+	local contents = {}
+	for line in love.filesystem.lines(path) do
+	  table.insert(contents, line)
+	end
 	local closed = false
 	local lineIndex = 1
 	local handle
@@ -603,25 +603,30 @@ function api.fs.open(path, mode)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	path = api.fs.combine("", path)
 	if mode == "r" then
-		local sPath = nil
+		local sPath
 		if love.filesystem.exists("data/" .. path) then
 			sPath = "data/" .. path
 		elseif love.filesystem.exists("lua/" .. path) then
 			sPath = "lua/" .. path
 		end
 		if sPath == nil or sPath == "lua/bios.lua" then return end
-
-		local contents, size = love.filesystem.read( sPath )
-
-		return FileReadHandle(lines(contents))
+		return FileReadHandle( sPath )
 	elseif mode == "rb" then
-		return FileBinaryReadHandle("data/" .. path)
+		local sPath
+		if love.filesystem.exists("data/" .. path) then
+			sPath = "data/" .. path
+		elseif love.filesystem.exists("lua/" .. path) then
+			sPath = "lua/" .. path
+		end
+		if sPath == nil or sPath == "lua/bios.lua" then return end
+		return FileBinaryReadHandle( sPath )
 	elseif mode == "w" or mode == "a" then
 		return FileWriteHandle("data/" .. path,mode == "a")
 	elseif mode == "wb" or mode == "ab" then
 		return FileBinaryWriteHandle("data/" .. path,mode == "ab")
+	else
+		error("Unsupported mode",2)
 	end
-	return nil
 end
 function api.fs.list(path)
 	if type(path) ~= "string" then

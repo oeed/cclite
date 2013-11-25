@@ -44,8 +44,8 @@ Screen = {
 	backgroundColourB = {},
 	textColourB = {},
 	font = nil,
-	pixelWidth = 6 * 2,
-	pixelHeight = 9 * 2,
+	pixelWidth = 12,
+	pixelHeight = 18,
 	showCursor = false,
 	textOffset = 3, -- Small correction for font, align the bottom of font with bottom of pixel.
 	lastCursor = nil,
@@ -67,8 +67,6 @@ function Screen:init()
 end
 
 -- Local functions are faster than global
--- Source: https://love2d.org/forums/viewtopic.php?f=3&t=3500
--- Unconfirmed, saw a drop from 12% to 10% cpu usage, too small a diff to confirm.
 local lsetCol = love.graphics.setColor
 local ldrawRect = love.graphics.rectangle
 local ldrawLine = love.graphics.line
@@ -90,9 +88,7 @@ function Screen:draw()
 	end
 
 	-- TODO Better damn rendering!
-	-- term api draws directly to buffer
-	-- i.e. each pixel is updated independantly on a canvas
-	-- copy the canvas to main canvas only when dirty/changed (blinking cursor)
+	-- Should only update sections that changed.
 
 	setColor( COLOUR_CODE[ self.backgroundColourB[1][1] ], true )
 	for y = 0, self.height - 1 do
