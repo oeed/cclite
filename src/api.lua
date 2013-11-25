@@ -744,6 +744,7 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 			peripheralDetach = api.cclite.peripheralDetach,
 			call = api.cclite.call,
 			log = print,
+			traceback = debug.traceback,
 		},
 		term = {
 			native = {

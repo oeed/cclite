@@ -47,9 +47,10 @@ Screen = {
 	pixelWidth = 12,
 	pixelHeight = 18,
 	showCursor = false,
-	textOffset = 3, -- Small correction for font, align the bottom of font with bottom of pixel.
+	textOffset = -3, -- Small correction for font, align the bottom of font with bottom of pixel.
 	lastCursor = nil,
 	dirty = true,
+	tOffset = {},
 }
 function Screen:init()
 	for y = 1, self.height do
@@ -64,6 +65,9 @@ function Screen:init()
 	end
 
 	self.font = love.graphics.getFont()
+	for i = 32,126 do Screen.tOffset[string.char(i)] = math.floor(self.pixelWidth / 4 - self.font:getWidth(string.char(i)) / 4) * 2 end
+	Screen.tOffset["@"] = 0
+	Screen.tOffset["~"] = 0
 end
 
 -- Local functions are faster than global
@@ -71,6 +75,7 @@ local lsetCol = love.graphics.setColor
 local ldrawRect = love.graphics.rectangle
 local ldrawLine = love.graphics.line
 local lprint = love.graphics.print
+local tOffset = Screen.tOffset
 
 local lastColor
 local function setColor(c,f)
@@ -111,13 +116,12 @@ function Screen:draw()
 			local sByte = string.byte(text)
 			if sByte == 9 then
 				text = " "
-			elseif sByte < 32 or sByte > 126 then
+			elseif sByte < 32 or sByte > 126 or sByte == 96 then
 				text = "?"
 			end
 			if text ~= " " then
-				local offset = self.pixelWidth / 2 - self.font:getWidth(text) / 2 -- Could also create a lookup table of widths on load
 				setColor( COLOUR_CODE[ self.textColourB[y + 1][x + 1] ] )
-				lprint( text, (x * self.pixelWidth) + offset, (y * self.pixelHeight) + self.textOffset)
+				lprint( text, (x * self.pixelWidth) + tOffset[text], (y * self.pixelHeight) + self.textOffset)
 			end
 		end
 	end

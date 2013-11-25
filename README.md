@@ -9,6 +9,10 @@ Forum topic: [Link](http://www.computercraft.info/forums2/index.php?/topic/13445
 
 This branch requires a version of Love built on a Fully Resumable VM such as the [LoveJIT builds](http://love2d.org/forums/viewtopic.php?f=3&t=8750&sid=38309655ba569e28dc1b2f09ecba5a9f#p53963)
 
+**Screenshots:**
+
+![Demonstration](http://i.imgur.com/rcwxN8M.png)
+
 TODO:
 -----
 
