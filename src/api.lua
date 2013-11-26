@@ -654,7 +654,13 @@ function api.fs.copy(fromPath, toPath)
 	if toPath == "rom" or string.sub(toPath, 1, 4) == "rom/" then
 		error("Access Deined",2)
 	end
-	copytree("data/" .. fromPath, "data/" .. toPath)
+	local sPath = nil
+	if love.filesystem.exists("data/" .. fromPath) then
+		sPath = "data/" .. fromPath
+	elseif love.filesystem.exists("lua/" .. fromPath) then
+		sPath = "lua/" .. fromPath
+	end
+	copytree(sPath, "data/" .. toPath)
 end
 
 function api.fs.delete(path)
