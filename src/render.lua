@@ -58,9 +58,9 @@ function Screen:init()
 		backgroundColourB[y] = {}
 		textColourB[y] = {}
 		for x = 1, self.width do
-			textB[x] = " "
-			backgroundColourB[x] = 32768
-			textColourB[x] = 1
+			textB[y][x] = " "
+			backgroundColourB[y][x] = 32768
+			textColourB[y][x] = 1
 		end
 	end
 
