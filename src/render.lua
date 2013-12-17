@@ -52,11 +52,11 @@ Screen = {
 	tOffset = {},
 }
 function Screen:init()
+	local textB, backgroundColourB, textColourB = self.textB, self.backgroundColourB, self.textColourB
 	for y = 1, self.height do
-		self.textB[y] = {}
-		self.backgroundColourB[y] = {}
-		self.textColourB[y] = {}
-		local textB, backgroundColourB, textColorB = self.textB, self.backgroundColourB, self.textColourB
+		textB[y] = {}
+		backgroundColourB[y] = {}
+		textColourB[y] = {}
 		for x = 1, self.width do
 			textB[x] = " "
 			backgroundColourB[x] = 32768
