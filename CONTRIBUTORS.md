@@ -5,6 +5,5 @@ Contributors
 - GravityScore
 - ElvishJerrico
 - Grim Reaper
-- infinikiller64 (PixelToast)
+- infinikiller64
 - gamax92
-- Symmetryc

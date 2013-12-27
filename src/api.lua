@@ -484,10 +484,10 @@ function api.fs.list(path)
 	path = api.fs.combine("", path)
 	local res = {}
 	if love.filesystem.exists("data/" .. path) then -- This path takes precedence
-		res = love.filesystem.enumerate("data/" .. path)
+		res = love.filesystem.getDirectoryItems("data/" .. path)
 	end
 	if love.filesystem.exists("lua/" .. path) then
-		for k, v in pairs(love.filesystem.enumerate("lua/" .. path)) do
+		for k, v in pairs(love.filesystem.getDirectoryItems("lua/" .. path)) do
 			if v ~= "bios.lua" then table.insert(res, v) end
 		end
 	end
@@ -573,7 +573,7 @@ function api.fs.makeDir(path) -- All write functions are within data/
 end
 
 local function deltree(sFolder)
-	local tObjects = love.filesystem.enumerate(sFolder)
+	local tObjects = love.filesystem.getDirectoryItems(sFolder)
 
 	if tObjects then
    		for _, sObject in pairs(tObjects) do

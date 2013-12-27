@@ -6,7 +6,7 @@ require('api')
 
 -- Load virtual peripherals.
 peripheral = {}
-local tFiles = love.filesystem.enumerate("peripheral")
+local tFiles = love.filesystem.getDirectoryItems("peripheral")
 for k,v in pairs(tFiles) do
 	require("peripheral." .. v:sub(1,-5))
 end
@@ -124,11 +124,11 @@ end
 function love.load()
 	if lockfps > 0 then 
 		min_dt = 1/lockfps
-		next_time = love.timer.getMicroTime()
+		next_time = love.timer.getTime()
 	end
 
-	love.graphics.setMode( Screen.width * Screen.pixelWidth, Screen.height * Screen.pixelHeight, false, true, 0 )
-	love.graphics.setCaption( "ComputerCraft Emulator" )
+	love.window.setMode( Screen.width * Screen.pixelWidth, Screen.height * Screen.pixelHeight, {})
+	love.window.setTitle( "ComputerCraft Emulator" )
 
 	font = love.graphics.newFont( 'res/minecraft.ttf', 16 )
 	love.graphics.setFont(font)
@@ -175,7 +175,7 @@ function  love.mousepressed( x, y, _button )
 	end
 end
 
-function love.keypressed(key, unicode)
+function love.keypressed(key)
 
 	if Emulator.actions.terminate == nil and love.keyboard.isDown("lctrl") and key == "t" then
 		Emulator.actions.terminate = love.timer.getTime()
@@ -194,8 +194,12 @@ function love.keypressed(key, unicode)
    		table.insert(Emulator.eventQueue, {"key", keys[key]})
    	end
 
-   	if unicode > 31 and unicode < 127 then
-    	table.insert(Emulator.eventQueue, {"char", string.char(unicode)})
+end
+
+function love.textinput(unicode)
+	local byte = string.byte(unicode)
+   	if byte > 31 and byte < 127 then
+    	table.insert(Emulator.eventQueue, {"char", unicode})
     end
 end
 
@@ -318,7 +322,7 @@ function love.draw()
 		end
 	end
 	if lockfps > 0 then 
-		local cur_time = love.timer.getMicroTime()
+		local cur_time = love.timer.getTime()
 		if next_time <= cur_time then
 			next_time = cur_time
 			return

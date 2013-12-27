@@ -1,3 +1,4 @@
+
 COLOUR_RGB = {
 	WHITE = {240, 240, 240},
 	ORANGE = {242, 178, 51},
@@ -52,15 +53,14 @@ Screen = {
 	tOffset = {},
 }
 function Screen:init()
-	local textB, backgroundColourB, textColourB = self.textB, self.backgroundColourB, self.textColourB
 	for y = 1, self.height do
-		textB[y] = {}
-		backgroundColourB[y] = {}
-		textColourB[y] = {}
+		self.textB[y] = {}
+		self.backgroundColourB[y] = {}
+		self.textColourB[y] = {}
 		for x = 1, self.width do
-			textB[y][x] = " "
-			backgroundColourB[y][x] = 32768
-			textColourB[y][x] = 1
+			self.textB[y][x] = " "
+			self.backgroundColourB[y][x] = 32768
+			self.textColourB[y][x] = 1
 		end
 	end
 
