@@ -135,10 +135,10 @@ function love.load()
 
 	love.filesystem.setIdentity( "ccemu" )
 	if not love.filesystem.exists( "data/" ) then
-		love.filesystem.mkdir( "data/" ) -- Make the user data folder
+		love.filesystem.createDirectory( "data/" ) -- Make the user data folder
 	end
 
-	love.keyboard.setKeyRepeat( 0.5, 0.05 )
+	love.keyboard.setKeyRepeat( true )
 
 	Emulator:start()
 end
@@ -316,9 +316,9 @@ function love.draw()
 		Screen:draw()
 		if debugmode then
 			love.graphics.setColor({0,0,0})
-			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.width * Screen.pixelWidth) - 84, 11)
+			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.width * Screen.pixelWidth) - (Screen.pixelWidth * 8), 11)
 			love.graphics.setColor({255,255,255})
-			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.width * Screen.pixelWidth) - 85, 10)
+			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.width * Screen.pixelWidth) - (Screen.pixelWidth * 8) - 1, 10)
 		end
 	end
 	if lockfps > 0 then 

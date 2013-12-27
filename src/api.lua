@@ -89,9 +89,8 @@ end
 
 local function FileBinaryReadHandle( path )
 	local closed = false
-	local File = love.filesystem.newFile( path )
+	local File = love.filesystem.newFile( path, "r" )
 	if File == nil then return end
-	File:open("r")
 	local handle = {
 		close = function()
 			closed = true
@@ -107,9 +106,8 @@ end
 
 local function FileWriteHandle( path, append )
 	local closed = false
-	local File = love.filesystem.newFile( path )
+	local File = love.filesystem.newFile( path, append and "a" or "w" )
 	if File == nil then return end
-	File:open(append and "a" or "w")
 	local handle = {
 		close = function()
 			closed = true
@@ -128,8 +126,7 @@ local function FileWriteHandle( path, append )
 				File:flush()
 			else
 				File:close()
-				File = love.filesystem.newFile( path )
-				File:open("a")
+				File = love.filesystem.newFile( path, "a" )
 			end
 		end
 	}
@@ -138,9 +135,8 @@ end
 
 local function FileBinaryWriteHandle( path, append )
 	local closed = false
-	local File = love.filesystem.newFile( path )
+	local File = love.filesystem.newFile( path, append and "a" or "w" )
 	if File == nil then return end
-	File:open(append and "a" or "w")
 	local handle = {
 		close = function()
 			closed = true
@@ -156,8 +152,7 @@ local function FileBinaryWriteHandle( path, append )
 				File:flush()
 			else
 				File:close()
-				File = love.filesystem.newFile( path )
-				File:open("a")
+				File = love.filesystem.newFile( path, "a" )
 			end
 		end
 	}
@@ -373,7 +368,6 @@ function api.os.startTimer( nTimeout )
 end
 function api.os.setAlarm( nTime )
 	if type(nTime) ~= "number" then error("Expected number",2) end
-	if type(nTime) ~= "number" then return end
 	if nTime < 0 or nTime > 24 then
 		error( "Number out of range: " .. tostring( nTime ) )
 	end
@@ -569,7 +563,7 @@ function api.fs.makeDir(path) -- All write functions are within data/
 	if path == "rom" or string.sub(path, 1, 4) == "rom/" then
 		error("Access Denied",2)
 	end
-	return love.filesystem.mkdir( "data/" .. path )
+	return love.filesystem.createDirectory( "data/" .. path )
 end
 
 local function deltree(sFolder)
@@ -593,8 +587,8 @@ local function copytree(sFolder, sToFolder)
 		love.filesystem.write(sToFolder, love.filesystem.read( sFolder ))
 		return
 	end
-	love.filesystem.mkdir(sToFolder)
-	local tObjects = love.filesystem.enumerate(sFolder)
+	love.filesystem.createDirectory(sToFolder)
+	local tObjects = love.filesystem.getDirectoryItems(sFolder)
 
 	if tObjects then
    		for _, sObject in pairs(tObjects) do
@@ -602,7 +596,7 @@ local function copytree(sFolder, sToFolder)
 			local pToObject = sToFolder.."/"..sObject
 
 			if love.filesystem.isDirectory(pObject) then
-				love.filesystem.mkdir(pToObject)
+				love.filesystem.createDirectory(pToObject)
 				copytree(pObject,pToObject)
 			else
 				love.filesystem.write(pToObject, love.filesystem.read( pObject ))
