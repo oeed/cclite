@@ -1,5 +1,5 @@
 require('http.HttpRequest')
-require('bit.numberlua')
+bit = require("bit")
 
 require('render')
 require('api')

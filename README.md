@@ -7,9 +7,7 @@ The forum topic below has a bit outdated and buggy version of cclite and is not 
 
 Forum topic: [Link](http://www.computercraft.info/forums2/index.php?/topic/13445-lightweight-cc-emulator-download-now/)
 
-This branch is a port of cclite to LOVE 0.9.0 and even though 0.9.0 has not been released, it will still be better to do this now then later.
-
-This branch requires a version of Love built on a Fully Resumable VM such as the [LoveJIT builds](http://love2d.org/forums/viewtopic.php?f=3&t=70979#p149956)
+Since Love2D 0.9.0 is now being built on LuaJIT by default, a Fully Resumable VM is already given. [Download Love2D 0.9.0](http://love2d.org/)
 
 **Screenshots:**
 
