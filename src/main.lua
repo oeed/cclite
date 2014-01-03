@@ -144,8 +144,12 @@ function love.load()
 end
 
 function love.mousereleased( x, y, _button )
-	Emulator.mouse.isPressed = x > 0 and x < Screen.width * Screen.pixelWidth
-	and y > 0 and y < Screen.height * Screen.pixelHeight -- Within screen bounds.
+
+	if x > 0 and x < Screen.width * Screen.pixelWidth
+		and y > 0 and y < Screen.height * Screen.pixelHeight then -- Within screen bounds.
+
+		Emulator.mouse.isPressed = false
+	end
 end
 
 function  love.mousepressed( x, y, _button )
