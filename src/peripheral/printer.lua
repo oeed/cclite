@@ -21,7 +21,7 @@ function peripheral.printer()
 				error("Expected number, number",2)
 			end
 			if paper == false then error("Page not started",2) end
-			paperX, paperY = math.floor(paperX), math.floor(paperY)
+			paperX, paperY = math.floor(nX), math.floor(nY)
 		elseif sMethod == "getCursorPos" then
 			if paper == false then error("Page not started",2) end
 			return paperX, paperY
