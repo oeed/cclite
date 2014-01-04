@@ -29,7 +29,7 @@ function peripheral.printer()
 			if paper == false then error("Page not started",2) end
 			return 25,21
 		elseif sMethod == "newPage" then
-			if inkCount == 0 or paperCount == 0 or paper == true then
+			if inkCount == 0 or paperCount == 0 then
 				return false
 			end
 			inkCount = inkCount - 1
