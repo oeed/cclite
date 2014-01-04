@@ -16,9 +16,7 @@ Since Love2D 0.9.0 is now being built on LuaJIT by default, a Fully Resumable VM
 TODO:
 -----
 
-Verify all functions work, fix those that are broken.
-
-Fix random freezes.
+Verify all functions work for 0.9.0 upgrade, fix those that are broken.
 
 Add in more error checking
 
@@ -30,9 +28,11 @@ Figure out how to manage disk drives and mounting.
 
 Rework the fs.open text read mode to use File objects.
 
-Fix Error Levels
+Make Error Levels report C functions properly.
 
 Make peripheralAttach only add valid sides.
+
+Have virtual Disk Drives work with Treasure disks
 
 **Add in missing globals:**
 

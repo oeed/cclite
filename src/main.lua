@@ -122,8 +122,8 @@ function Emulator:resume( ... )
 end
 
 function love.load()
-	if lockfps > 0 then 
-		min_dt = 1/lockfps
+	if _conf.lockfps > 0 then 
+		min_dt = 1/_conf.lockfps
 		next_time = love.timer.getTime()
 	end
 
@@ -226,7 +226,7 @@ function updateShortcut(name, key1, key2, cb)
 end
 
 function love.update(dt)
-	if lockfps > 0 then next_time = next_time + min_dt end
+	if _conf.lockfps > 0 then next_time = next_time + min_dt end
 	local now = love.timer.getTime()
 	HttpRequest.checkRequests()
 	if Emulator.reboot then Emulator:start() end
@@ -251,7 +251,7 @@ function love.update(dt)
 			Screen.dirty = true
 		end
 	end
-	if debugmode then
+	if _conf.debugmode then
 		if now - Emulator.lastFPS >= 1 then
 			Emulator.FPS = love.timer.getFPS()
 			Emulator.lastFPS = now
@@ -314,14 +314,14 @@ local lastFPS,fps = love.timer.getTime(),love.timer.getFPS()
 function love.draw()
 	if Screen.dirty then
 		Screen:draw()
-		if debugmode then
+		if _conf.debugmode then
 			love.graphics.setColor({0,0,0})
 			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.width * Screen.pixelWidth) - (Screen.pixelWidth * 8), 11)
 			love.graphics.setColor({255,255,255})
 			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.width * Screen.pixelWidth) - (Screen.pixelWidth * 8) - 1, 10)
 		end
 	end
-	if lockfps > 0 then 
+	if _conf.lockfps > 0 then 
 		local cur_time = love.timer.getTime()
 		if next_time <= cur_time then
 			next_time = cur_time
