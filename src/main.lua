@@ -49,6 +49,17 @@ keys = {
 	["lalt"] = 56,
 }
 
+-- Patch love.keyboard.isDown to make ctrl checking easier
+local olkiD = love.keyboard.isDown
+function love.keyboard.isDown( ... )
+	local keys = { ... }
+	if #keys == 1 and keys[1] == "ctrl" then
+		return olkiD("lctrl") or olkiD("rctrl")
+	else
+		return olkiD(unpack(keys))
+	end
+end
+
 Emulator = {
 	running = false,
 	reboot = false, -- Tells update loop to start Emulator automatically
@@ -133,8 +144,21 @@ function love.load()
 	love.window.setMode( Screen.width * Screen.pixelWidth, Screen.height * Screen.pixelHeight, {})
 	love.window.setTitle( "ComputerCraft Emulator" )
 
-	font = love.graphics.newFont( 'res/minecraft.ttf', 16 )
+	font = love.graphics.newFont("res/minecraft.ttf", 16 )
 	love.graphics.setFont(font)
+
+	local fontObj = love.filesystem.newFile("res/font.txt", "r")
+	local fontPack = ""
+	for line in fontObj:lines() do
+		if line:sub(1,1) ~= "#" then
+			fontPack = fontPack .. line
+		end
+	end
+	fontObj:close()
+	ChatAllowedCharacters = {}
+	for i = 1,#fontPack do
+		ChatAllowedCharacters[fontPack:sub(i,i):byte()] = true
+	end
 
 	love.filesystem.setIdentity( "ccemu" )
 	if not love.filesystem.exists( "data/" ) then
@@ -178,14 +202,20 @@ function  love.mousepressed( x, y, _button )
 	end
 end
 
-function love.keypressed(key)
+function love.textinput(unicode)
+	local byte = string.byte(unicode)
+   	if ChatAllowedCharacters[byte] == true then
+    	table.insert(Emulator.eventQueue, {"char", unicode})
+    end
+end
 
-	if Emulator.actions.terminate == nil and love.keyboard.isDown("lctrl") and key == "t" then
+function love.keypressed(key)
+	if Emulator.actions.terminate == nil    and love.keyboard.isDown("ctrl") and key == "t" then
 		Emulator.actions.terminate = love.timer.getTime()
-	elseif Emulator.actions.shutdown == nil and love.keyboard.isDown("lctrl") and key == "s" then
-		Emulator.actions.shutdown = love.timer.getTime()
-	elseif Emulator.actions.reboot == nil and love.keyboard.isDown("lctrl") and key == "r" then
-		Emulator.actions.reboot = love.timer.getTime()
+	elseif Emulator.actions.shutdown == nil and love.keyboard.isDown("ctrl") and key == "s" then
+		Emulator.actions.shutdown =  love.timer.getTime()
+	elseif Emulator.actions.reboot == nil   and love.keyboard.isDown("ctrl") and key == "r" then
+		Emulator.actions.reboot =    love.timer.getTime()
 	else -- Ignore key shortcuts before "press any key" action. TODO: This might be slightly buggy!
 		if not Emulator.running then
 			Emulator:start()
@@ -193,23 +223,18 @@ function love.keypressed(key)
 		end
 	end
 
-	if keys[key] then
+	if love.keyboard.isDown("ctrl") and key == "v" then
+		local cliptext = love.system.getClipboardText():sub(1,128)
+		for i = 1,#cliptext do
+			love.textinput(cliptext:sub(i,i))
+		end
+	elseif keys[key] then
    		table.insert(Emulator.eventQueue, {"key", keys[key]})
    	end
-
-end
-
-function love.textinput(unicode)
-	local byte = string.byte(unicode)
-   	if byte > 31 and byte < 127 then
-    	table.insert(Emulator.eventQueue, {"char", unicode})
-    end
 end
 
 --[[
 	Not implementing:
-	disk
-	disk_eject
 	modem_message
 	monitor_touch
 	monitor_resize
@@ -234,13 +259,13 @@ function love.update(dt)
 	HttpRequest.checkRequests()
 	if Emulator.reboot then Emulator:start() end
 
-	updateShortcut("terminate", "lctrl", "t", function()
+	updateShortcut("terminate", "ctrl", "t", function()
 			table.insert(Emulator.eventQueue, {"terminate"})
 		end)
-	updateShortcut("shutdown", "lctrl", "s", function()
+	updateShortcut("shutdown",  "ctrl", "s", function()
 			Emulator:stop()
 		end)
-	updateShortcut("reboot", "lctrl", "r", function()
+	updateShortcut("reboot",    "ctrl", "r", function()
 			Emulator:stop( true )
 		end)
 
