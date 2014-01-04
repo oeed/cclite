@@ -224,7 +224,15 @@ function love.keypressed(key)
 	end
 
 	if love.keyboard.isDown("ctrl") and key == "v" then
-		local cliptext = love.system.getClipboardText():sub(1,128)
+		local cliptext = love.system.getClipboardText()
+		cliptext = cliptext:gsub("\r\n","\n")
+		local nloc = cliptext:find("\n") or -1
+		if nloc > 0 then
+			cliptext = cliptext:sub(1, nloc - (_conf.faultyClip == true and 2 or 1))
+		end
+		if #cliptext > 128 then
+			cliptext = cliptext:sub(1,128)
+		end
 		for i = 1,#cliptext do
 			love.textinput(cliptext:sub(i,i))
 		end
