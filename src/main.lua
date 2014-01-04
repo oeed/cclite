@@ -230,9 +230,7 @@ function love.keypressed(key)
 		if nloc > 0 then
 			cliptext = cliptext:sub(1, nloc - (_conf.faultyClip == true and 2 or 1))
 		end
-		if #cliptext > 128 then
-			cliptext = cliptext:sub(1,128)
-		end
+		cliptext = cliptext:sub(1,128)
 		for i = 1,#cliptext do
 			love.textinput(cliptext:sub(i,i))
 		end

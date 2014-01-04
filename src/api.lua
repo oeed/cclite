@@ -115,7 +115,7 @@ local function FileWriteHandle( path, append )
 		end,
 		writeLine = function( data )
 			if closed then error("Stream closed",2) end
-			File:write(data .. string.char(10))
+			File:write(data .. (_conf.useCRLF == true and "\r\n" or "\n"))
 		end,
 		write = function ( data )
 			if closed then error("Stream closed",2) end
