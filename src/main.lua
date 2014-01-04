@@ -110,7 +110,9 @@ end
 
 function Emulator:resume( ... )
 	if not self.running then return end
+	debug.sethook(self.proc,function() error("Too long without yielding",2) end,"",10000000)
 	local ok, err = coroutine.resume(self.proc, ...)
+	debug.sethook(self.proc)
 	if not self.proc then return end -- Emulator:stop could be called within the coroutine resulting in proc being nil
 	if coroutine.status(self.proc) == "dead" then -- Which could cause an error here
 		Emulator:stop()
@@ -122,6 +124,7 @@ function Emulator:resume( ... )
 end
 
 function love.load()
+	jit.off()
 	if _conf.lockfps > 0 then 
 		min_dt = 1/_conf.lockfps
 		next_time = love.timer.getTime()
