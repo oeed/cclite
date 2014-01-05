@@ -1,7 +1,6 @@
 @echo off
 set /P version=Enter version (Format: x.y.z): 
 cd src\
-7z a -tzip "..\build\temp.zip" ".\*" -mx5
+7z a -r -tzip -mx5 "..\cclite-beta-%version%.love" ".\*"
 cd ..\
-rename build\temp.zip cclite-beta-%version%.love
 pause

@@ -1,17 +1,23 @@
-cclite
-======
+CCLite ComputerCraft Emulator
+=============================
 
-A cc emulator written in lua
+**Description:**
 
-The forum topic below has a bit outdated and buggy version of cclite and is not recommended for usage.
+This is a ComputerCraft Emulator written in Love2D. It is not complete, and is still a work in progress.
 
-Forum topic: [Link](http://www.computercraft.info/forums2/index.php?/topic/13445-lightweight-cc-emulator-download-now/)
+I will not be handing out builds for this emulator. To use it, [download Love2D 0.9.0](http://love2d.org/) and use the build_src.bat to produce a .love file.
 
-Since Love2D 0.9.0 is now being built on LuaJIT by default, a Fully Resumable VM is already given. [Download Love2D 0.9.0](http://love2d.org/)
+If you have installed Love2D you can just double click on the .love file to run it.
+
+The [forum topic](http://www.computercraft.info/forums2/index.php?/topic/13445-lightweight-cc-emulator-download-now/) for CCLite is from the original author, Sorroko, and features in mine are not guarenteed to be in his, vice versa.
 
 **Screenshots:**
 
-![Demonstration](http://i.imgur.com/rcwxN8M.png)
+![Demonstration](http://i.imgur.com/qC4LLGf.png)
+
+**NOTES:**
+
+My fork of CCLite has a different save directory than Sorroko's version. Mine will save to the "ccemu" folder while his saves to "cclite"
 
 TODO:
 -----
@@ -32,7 +38,7 @@ Make peripheralAttach only add valid sides.
 
 Have virtual Disk Drives work with Treasure disks
 
-Don't load HTTP apis when _conf.enableAPI_http is false
+Don't load HTTP apis when conf.enableAPI_http is false
 
 **Add in missing globals:**
 
