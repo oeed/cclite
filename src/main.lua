@@ -141,6 +141,8 @@ function love.load()
 		next_time = love.timer.getTime()
 	end
 
+	love.filesystem.setIdentity("ccemu")
+	
 	font = love.graphics.newFont("res/minecraft.ttf", _conf.terminal_guiScale * 8)
 	love.graphics.setFont(font)
 
