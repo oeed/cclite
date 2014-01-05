@@ -51,7 +51,7 @@ function waitForInstructions(channel, debug)
         print("     ")
     end
 
-    httpParams.redirects = 1
+    httpParams.redirects = 0
     sendRequest()
 end
 
@@ -74,7 +74,7 @@ function sendRequest()
         }
     }
 
-    if result[2] == 302 or result[2] == 301 and httpParams.redirects < 20 then
+    if result[2] == 302 or result[2] == 301 and httpParams.redirects < 19 then
         httpResponseBody = {}
         httpParams.url = result[3]["location"]
         httpParams.redirects = httpParams.redirects + 1
