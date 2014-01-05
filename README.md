@@ -26,13 +26,13 @@ Fix odd endPage bug in virtual printer.
 
 Figure out how to manage disk drives and mounting.
 
-Rework the fs.open text read mode to use File objects.
-
 Make Error Levels report C functions properly.
 
 Make peripheralAttach only add valid sides.
 
 Have virtual Disk Drives work with Treasure disks
+
+Don't load HTTP apis when _conf.enableAPI_http is false
 
 **Add in missing globals:**
 

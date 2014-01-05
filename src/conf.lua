@@ -1,17 +1,42 @@
 _conf = {
-	debugmode = false, -- Set this to true to enable the console and view fps, Default false.
-	lockfps = 20,      -- Set this to 0 to disable FPS limiting, Default 20.
-	faultyClip = true, -- Emulate CC removing the letter before \n in the clipboard
-	useCRLF = false,   -- Use \r\n instead of \n in fs.writeLine
+	-- Enable the "http" API on Computers
+	enableAPI_http = true,
+	
+	-- Enable the "cclite" API on Computers
+	enableAPI_cclite = true,
+	
+	-- The height of Computer screens, in characters
+	terminal_height = 19,
+	
+	-- The width of Computer screens, in characters
+	terminal_width = 51,
+	
+	-- The pixel scale of Computer screens
+	terminal_scale = 2,
+
+	-- Enable Love2D console and display current FPS
+	debugmode = false,
+	
+	-- The FPS to lock CCLite to
+	lockfps = 20,
+	
+	-- Enable emulation of buggy Clipboard handling
+	faultyClip = true,
+	
+	-- Enable usage of Carrage Return for fs.writeLine
+	useCRLF = false,
 }
 function love.conf(t)
-    t.title = "ComputerCraft Emulator"
-    t.author = "gamax92"
-    t.version = "0.9.0"
-	t.release = false
+	t.identify = "ccemu"
 	t.console = _conf.debugmode
+    t.window.title = "ComputerCraft Emulator"
+	t.window.icon = "res/icon.png"
+	t.window.width = _conf.terminal_width * 6 * _conf.terminal_scale
+	t.window.height = _conf.terminal_height * 9 * _conf.terminal_scale
+	t.window.vsync = false
+    t.modules.audio = false
+    t.modules.joystick = false
     t.modules.physics = false
-	t.modules.audio = false
-	t.modules.image = false
-	t.modules.sound = false
+    t.modules.sound = false
+    t.modules.math = false
 end

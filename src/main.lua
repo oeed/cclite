@@ -135,16 +135,13 @@ function Emulator:resume( ... )
 end
 
 function love.load()
-	jit.off()
+	jit.off() -- Required for "Too long without yielding"
 	if _conf.lockfps > 0 then 
 		min_dt = 1/_conf.lockfps
 		next_time = love.timer.getTime()
 	end
 
-	love.window.setMode( Screen.width * Screen.pixelWidth, Screen.height * Screen.pixelHeight, {})
-	love.window.setTitle( "ComputerCraft Emulator" )
-
-	font = love.graphics.newFont("res/minecraft.ttf", 16 )
+	font = love.graphics.newFont("res/minecraft.ttf", _conf.terminal_scale * 8)
 	love.graphics.setFont(font)
 
 	local fontObj = love.filesystem.newFile("res/font.txt", "r")
@@ -160,9 +157,8 @@ function love.load()
 		ChatAllowedCharacters[fontPack:sub(i,i):byte()] = true
 	end
 
-	love.filesystem.setIdentity( "ccemu" )
-	if not love.filesystem.exists( "data/" ) then
-		love.filesystem.createDirectory( "data/" ) -- Make the user data folder
+	if not love.filesystem.exists("data/") then
+		love.filesystem.createDirectory("data/") -- Make the user data folder
 	end
 
 	love.keyboard.setKeyRepeat( true )

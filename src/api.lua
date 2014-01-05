@@ -277,60 +277,64 @@ end
 
 api.cclite = {}
 api.cclite.peripherals = {}
-function api.cclite.peripheralAttach( sSide, sType )
-	if type(sSide) ~= "string" or type(sType) ~= "string" then
-		error("Expected string, string",2)
+if _conf.enableAPI_cclite == true then
+	function api.cclite.peripheralAttach( sSide, sType )
+		if type(sSide) ~= "string" or type(sType) ~= "string" then
+			error("Expected string, string",2)
+		end
+		if not peripheral[sType] then
+			error("No virtual peripheral of type " .. sType,2)
+		end
+		if api.cclite.peripherals[sSide] then
+			error("Peripheral already attached to " .. sSide,2)
+		end
+		api.cclite.peripherals[sSide] = peripheral[sType](sSide)
+		if api.cclite.peripherals[sSide] ~= nil then
+			table.insert(Emulator.eventQueue, {"peripheral",sSide})
+		else
+			error("No peripheral added",2)
+		end
 	end
-	if not peripheral[sType] then
-		error("No virtual peripheral of type " .. sType,2)
+	function api.cclite.peripheralDetach( sSide )
+		if type(sSide) ~= "string" then error("Expected string",2) end
+		if not api.cclite.peripherals[sSide] then
+			error("No peripheral attached to " .. sSide,2)
+		end
+		api.cclite.peripherals[sSide] = nil
+		table.insert(Emulator.eventQueue, {"peripheral_detach",sSide})
 	end
-	if api.cclite.peripherals[sSide] then
-		error("Peripheral already attached to " .. sSide,2)
-	end
-	api.cclite.peripherals[sSide] = peripheral[sType](sSide)
-	if api.cclite.peripherals[sSide] ~= nil then
-		table.insert(Emulator.eventQueue, {"peripheral",sSide})
-	else
-		error("No peripheral added",2)
+	function api.cclite.call( sSide, sMethod, ... )
+		if type(sSide) ~= "string" then error("Expected string",2) end
+		if type(sMethod) ~= "string" then error("Expected string, string",2) end
+		if not api.cclite.peripherals[sSide] then error("No peripheral attached",2) end
+		return api.cclite.peripherals[sSide].ccliteCall(sMethod, ...)
 	end
 end
-function api.cclite.peripheralDetach( sSide )
-	if type(sSide) ~= "string" then error("Expected string",2) end
-	if not api.cclite.peripherals[sSide] then
-		error("No peripheral attached to " .. sSide,2)
+
+if _conf.enableAPI_http == true then
+	api.http = {}
+	function api.http.request( sUrl, sParams )
+		local http = HttpRequest.new()
+		local method = sParams and "POST" or "GET"
+
+		http.open(method, sUrl, true)
+
+		if method == "POST" then
+			http.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
+			http.setRequestHeader("Content-Length", string.len(sParams))
+		end
+
+		http.onReadyStateChange = function()
+			if http.responseText then -- TODO: check if timed out instead
+				local handle = HTTPHandle(lines(http.responseText), http.status)
+				table.insert(Emulator.eventQueue, { "http_success", sUrl, handle })
+			else
+				 table.insert(Emulator.eventQueue, { "http_failure", sUrl })
+			end
+		end
+
+		http.send(sParams)
 	end
-	api.cclite.peripherals[sSide] = nil
-	table.insert(Emulator.eventQueue, {"peripheral_detach",sSide})
-end
-function api.cclite.call( sSide, sMethod, ... )
-	if type(sSide) ~= "string" then error("Expected string",2) end
-	if type(sMethod) ~= "string" then error("Expected string, string",2) end
-	if not api.cclite.peripherals[sSide] then error("No peripheral attached",2) end
-	return api.cclite.peripherals[sSide].ccliteCall(sMethod, ...)
-end
-
-api.http = {}
-function api.http.request( sUrl, sParams )
-	local http = HttpRequest.new()
-	local method = sParams and "POST" or "GET"
-
-	http.open(method, sUrl, true)
-
-	if method == "POST" then
-		http.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
-   		http.setRequestHeader("Content-Length", string.len(sParams))
-	end
-
-	http.onReadyStateChange = function()
-		if http.responseText then -- TODO: check if timed out instead
-	        local handle = HTTPHandle(lines(http.responseText), http.status)
-	        table.insert(Emulator.eventQueue, { "http_success", sUrl, handle })
-	    else
-	    	 table.insert(Emulator.eventQueue, { "http_failure", sUrl })
-	    end
-    end
-
-    http.send(sParams)
 end
 
 api.os = {}
@@ -739,13 +743,6 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 		coroutine = coroutine,
 
 		-- CC apis (BIOS completes api.)
-		cclite = {
-			peripheralAttach = api.cclite.peripheralAttach,
-			peripheralDetach = api.cclite.peripheralDetach,
-			call = api.cclite.call,
-			log = print,
-			traceback = debug.traceback,
-		},
 		term = {
 			native = {
 				clear = api.term.clear,
@@ -816,9 +813,6 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 			call = api.peripheral.call,
 			getNames = api.peripheral.getNames,
 		},
-		http = {
-			request = api.http.request,
-		},
 		redstone = {
 			getSides = function() return {"top","bottom","left","right","front","back"} end,
 			getInput = function() end,
@@ -842,6 +836,20 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 			bnot = api.bit.bnot,
 		},
 	}
+	if _conf.enableAPI_http == true then
+		api.env.http = {
+			request = api.http.request,
+		}
+	end
+	if _conf.enableAPI_cclite == true then
+		api.env.cclite = {
+			peripheralAttach = api.cclite.peripheralAttach,
+			peripheralDetach = api.cclite.peripheralDetach,
+			call = api.cclite.call,
+			log = print,
+			traceback = debug.traceback,
+		}
+	end
 	api.env.redstone.getAnalogueInput = api.env.redstone.getAnalogInput
 	api.env.redstone.getAnalogueOutput = api.env.redstone.getAnalogOutput
 	api.env.redstone.setAnalogueOutput = api.env.redstone.setAnalogOutput

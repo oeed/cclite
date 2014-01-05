@@ -38,16 +38,16 @@ COLOUR_CODE = {
 }
 
 Screen = {
-	width = 51,
-	height = 19,
+	width = _conf.terminal_width,
+	height = _conf.terminal_height,
 	textB = {},
 	backgroundColourB = {},
 	textColourB = {},
 	font = nil,
-	pixelWidth = 12,
-	pixelHeight = 18,
+	pixelWidth = _conf.terminal_scale * 6,
+	pixelHeight = _conf.terminal_scale * 9,
 	showCursor = false,
-	textOffset = -3, -- Small correction for font, align the bottom of font with bottom of pixel.
+	textOffset = math.floor(_conf.terminal_scale*-1.5), -- Correction to align font. TODO: This is correct up to 5.
 	lastCursor = nil,
 	dirty = true,
 	tOffset = {},
