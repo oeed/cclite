@@ -163,6 +163,33 @@ local function FileBinaryWriteHandle( path, append )
 end
 
 api = {}
+if _conf.compat_loadstringMask == true then
+	function api.loadstring(str, source)
+		source = source or "string"
+		if type(str) ~= "string" and type(str) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
+		if type(source) ~= "string" and type(source) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
+		local file = love.filesystem.newFile(source,"w")
+		file:write(str)
+		file:close()
+		local f, err = love.filesystem.load(source)
+		love.filesystem.remove(source)
+		if f then
+			setfenv(f, api.env)
+		end
+		return f, err
+	end
+else
+	function api.loadstring(str, source)
+		source = source or "string"
+		if type(str) ~= "string" and type(str) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
+		if type(source) ~= "string" and type(source) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
+		local f, err = loadstring(str, source)
+		if f then
+			setfenv(f, api.env)
+		end
+		return f, err
+	end
+end
 
 api.term = {}
 function api.term.clear()
@@ -731,15 +758,7 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 		ipairs = ipairs,
 		pairs = pairs,
 		pcall = pcall,
-
-		loadstring = function(str, source)
-			local f, err = loadstring(str, source)
-			if f then
-				setfenv(f, api.env)
-			end
-			return f, err
-		end,
-
+		loadstring = api.loadstring,
 		math = tablecopy(math),
 		string = tablecopy(string),
 		table = table,

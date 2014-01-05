@@ -67,9 +67,10 @@ function Screen:init()
 	end
 
 	self.font = love.graphics.getFont()
-	for i = 32,126 do Screen.tOffset[string.char(i)] = math.floor(self.pixelWidth / 4 - self.font:getWidth(string.char(i)) / 4) * 2 end
-	Screen.tOffset["@"] = 0
-	Screen.tOffset["~"] = 0
+	for i = 32,126 do self.tOffset[string.char(i)] = math.floor(self.pixelWidth / 4 - self.font:getWidth(string.char(i)) / 4) * 2 end
+	self.tOffset["@"] = 0
+	self.tOffset["~"] = 0
+	self.dirty = true
 end
 
 -- Local functions are faster than global

@@ -227,7 +227,7 @@ function love.keypressed(key)
 		cliptext = cliptext:gsub("\r\n","\n")
 		local nloc = cliptext:find("\n") or -1
 		if nloc > 0 then
-			cliptext = cliptext:sub(1, nloc - (_conf.faultyClip == true and 2 or 1))
+			cliptext = cliptext:sub(1, nloc - (_conf.compat_faultyClip == true and 2 or 1))
 		end
 		cliptext = cliptext:sub(1,128)
 		for i = 1,#cliptext do

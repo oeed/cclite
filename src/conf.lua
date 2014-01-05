@@ -21,10 +21,13 @@ _conf = {
 	lockfps = 20,
 	
 	-- Enable emulation of buggy Clipboard handling
-	faultyClip = true,
+	compat_faultyClip = true,
 	
 	-- Enable usage of Carrage Return for fs.writeLine
 	useCRLF = false,
+	
+	-- Mask [string "source"] from loadstring
+	compat_loadstringMask = true,
 }
 function love.conf(t)
 	t.identify = "ccemu"
