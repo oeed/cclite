@@ -11,8 +11,8 @@ _conf = {
 	-- The width of Computer screens, in characters
 	terminal_width = 51,
 	
-	-- The pixel scale of Computer screens
-	terminal_scale = 2,
+	-- The GUI scale of Computer screens
+	terminal_guiScale = 2,
 
 	-- Enable Love2D console and display current FPS
 	debugmode = false,
@@ -31,8 +31,8 @@ function love.conf(t)
 	t.console = _conf.debugmode
     t.window.title = "ComputerCraft Emulator"
 	t.window.icon = "res/icon.png"
-	t.window.width = _conf.terminal_width * 6 * _conf.terminal_scale
-	t.window.height = _conf.terminal_height * 9 * _conf.terminal_scale
+	t.window.width = _conf.terminal_width * 6 * _conf.terminal_guiScale
+	t.window.height = _conf.terminal_height * 9 * _conf.terminal_guiScale
 	t.window.vsync = false
     t.modules.audio = false
     t.modules.joystick = false

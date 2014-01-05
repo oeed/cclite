@@ -1,4 +1,4 @@
-require('http.HttpRequest')
+if _conf.enableAPI_http == true then require('http.HttpRequest') end
 bit = require("bit")
 
 require('render')
@@ -141,7 +141,7 @@ function love.load()
 		next_time = love.timer.getTime()
 	end
 
-	font = love.graphics.newFont("res/minecraft.ttf", _conf.terminal_scale * 8)
+	font = love.graphics.newFont("res/minecraft.ttf", _conf.terminal_guiScale * 8)
 	love.graphics.setFont(font)
 
 	local fontObj = love.filesystem.newFile("res/font.txt", "r")
@@ -258,7 +258,7 @@ end
 function love.update(dt)
 	if _conf.lockfps > 0 then next_time = next_time + min_dt end
 	local now = love.timer.getTime()
-	HttpRequest.checkRequests()
+	if _conf.enableAPI_http == true then HttpRequest.checkRequests() end
 	if Emulator.reboot then Emulator:start() end
 
 	updateShortcut("terminate", "ctrl", "t", function()

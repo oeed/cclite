@@ -14,40 +14,43 @@ end
 
 -- HELPER CLASSES/HANDLES
 -- TODO Make more efficient, use love.filesystem.lines
-local function HTTPHandle(contents, status)
-	local closed = false
-	local lineIndex = 1
-	local handle
-	handle = {
-		close = function()
-			closed = true
-		end,
-		readLine = function()
-			if closed then return end
-			local str = contents[lineIndex]
-			lineIndex = lineIndex + 1
-			return str
-		end,
-		readAll = function()
-			if closed then return end
-			if lineIndex == 1 then
-				lineIndex = #contents + 1
-				return table.concat(contents, '\n')
-			else
-				local tData = {}
-				local data = handle.readLine()
-				while data ~= nil do
-					table.insert(tData, data)
-					data = handle.readLine()
+local HTTPHandle
+if _conf.enableAPI_http == true then
+	function HTTPHandle(contents, status)
+		local closed = false
+		local lineIndex = 1
+		local handle
+		handle = {
+			close = function()
+				closed = true
+			end,
+			readLine = function()
+				if closed then return end
+				local str = contents[lineIndex]
+				lineIndex = lineIndex + 1
+				return str
+			end,
+			readAll = function()
+				if closed then return end
+				if lineIndex == 1 then
+					lineIndex = #contents + 1
+					return table.concat(contents, '\n')
+				else
+					local tData = {}
+					local data = handle.readLine()
+					while data ~= nil do
+						table.insert(tData, data)
+						data = handle.readLine()
+					end
+					return table.concat(tData, '\n')
 				end
-				return table.concat(tData, '\n')
+			end,
+			getResponseCode = function()
+				return status
 			end
-		end,
-		getResponseCode = function()
-			return status
-		end
-	}
-	return handle
+		}
+		return handle
+	end
 end
 
 local function FileReadHandle( path )
