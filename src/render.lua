@@ -40,6 +40,8 @@ COLOUR_CODE = {
 Screen = {
 	width = _conf.terminal_width,
 	height = _conf.terminal_height,
+	sWidth = (_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2),
+	sHeight = (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2),
 	textB = {},
 	backgroundColourB = {},
 	textColourB = {},
@@ -76,6 +78,8 @@ local ldrawRect = love.graphics.rectangle
 local ldrawLine = love.graphics.line
 local lprint = love.graphics.print
 local tOffset = Screen.tOffset
+local decWidth = Screen.width - 1
+local decHeight = Screen.height - 1
 
 local lastColor
 local function setColor(c,f)
@@ -88,28 +92,25 @@ end
 function Screen:draw()
 	if not Emulator.running then
 		lsetCol({0,0,0})
-		ldrawRect("fill", 0, 0, self.width * self.pixelWidth, self.height * self.pixelHeight )
-		lsetCol({240, 240, 240})
-		local text = "Press any key..."
-		lprint(text, ((self.width * self.pixelWidth) / 2) - (font:getWidth(text) / 2), (self.height * self.pixelHeight) / 2)
+		ldrawRect("fill", 0, 0, self.sWidth, self.sHeight)
 		return
 	end
 
 	-- TODO Better damn rendering!
 	-- Should only update sections that changed.
 
+	-- Render the Background Color
 	setColor( COLOUR_CODE[ self.backgroundColourB[1][1] ], true )
-	for y = 0, self.height - 1 do
-		for x = 0, self.width - 1 do
+	for y = 0, decHeight do
+		for x = 0, decWidth do
 
 			setColor( COLOUR_CODE[ self.backgroundColourB[y + 1][x + 1] ] ) -- TODO COLOUR_CODE lookup might be too slow?
-			ldrawRect("fill", x * self.pixelWidth, y * self.pixelHeight, self.pixelWidth, self.pixelHeight )
+			ldrawRect("fill", x * self.pixelWidth + (x == 0 and 0 or _conf.terminal_guiScale), y * self.pixelHeight + (y == 0 and 0 or _conf.terminal_guiScale), self.pixelWidth + ((x == 0 or x == decWidth) and _conf.terminal_guiScale or 0), self.pixelHeight + ((y == 0 or y == decHeight) and _conf.terminal_guiScale or 0))
 
 		end
 	end
 
-	-- Two seperate for loops to not setColor all the time and allow batch gl calls.
-	-- Is this actually a performance improvement?
+	-- Render the Text
 	for y = 0, self.height - 1 do
 		for x = 0, self.width - 1 do
 			local text = self.textB[y + 1][x + 1]
@@ -121,7 +122,7 @@ function Screen:draw()
 			end
 			if text ~= " " then
 				setColor( COLOUR_CODE[ self.textColourB[y + 1][x + 1] ] )
-				lprint( text, (x * self.pixelWidth) + tOffset[text], (y * self.pixelHeight) + self.textOffset)
+				lprint( text, (x * self.pixelWidth) + tOffset[text] + _conf.terminal_guiScale, (y * self.pixelHeight) + self.textOffset)
 			end
 		end
 	end

@@ -109,6 +109,7 @@ function Emulator:stop( reboot )
 	self.proc = nil
 	self.running = false
 	self.reboot = reboot
+	Screen.dirty = true
 
 	-- Reset events/key shortcuts
 	self.actions.terminate = nil
