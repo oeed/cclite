@@ -175,10 +175,12 @@ if _conf.compat_loadstringMask == true then
 		local stat, f, err = pcall(function() return love.filesystem.load(source) end)
 		love.filesystem.remove(source)
 		if not stat then
-			if f:sub(1,14) ~= "Syntax error: " then
-				return nil, f
+			-- Fall back to old method.
+			local f, err = loadstring(str, source)
+			if f then
+				setfenv(f, api.env)
 			end
-			return nil, f:sub(15)
+			return f, err
 		end
 		if f then
 			setfenv(f, api.env)

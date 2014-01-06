@@ -60,6 +60,10 @@ function love.keyboard.isDown( ... )
 	end
 end
 
+function math.bind(val,lower,upper)
+	return math.min(math.max(val,lower),upper)
+end
+
 Emulator = {
 	running = false,
 	reboot = false, -- Tells update loop to start Emulator automatically
@@ -171,8 +175,8 @@ end
 
 function love.mousereleased( x, y, _button )
 
-	if x > 0 and x < Screen.width * Screen.pixelWidth
-		and y > 0 and y < Screen.height * Screen.pixelHeight then -- Within screen bounds.
+	if x > 0 and x < Screen.sWidth
+		and y > 0 and y < Screen.sHeight then -- Within screen bounds.
 
 		Emulator.mouse.isPressed = false
 	end
@@ -180,11 +184,11 @@ end
 
 function  love.mousepressed( x, y, _button )
 
-	if x > 0 and x < Screen.width * Screen.pixelWidth
-		and y > 0 and y < Screen.height * Screen.pixelHeight then -- Within screen bounds.
+	if x > 0 and x < Screen.sWidth
+		and y > 0 and y < Screen.sHeight then -- Within screen bounds.
 
-		local termMouseX = math.floor( x / Screen.pixelWidth ) + 1
-    	local termMouseY = math.floor( y / Screen.pixelHeight ) + 1
+		local termMouseX = math.bind(math.floor( (x - _conf.terminal_guiScale) / Screen.pixelWidth ) + 1,1,_conf.terminal_width)
+    	local termMouseY = math.bind(math.floor( (y - _conf.terminal_guiScale) / Screen.pixelHeight ) + 1,1,_conf.terminal_height)
 
 		if not Emulator.mousePressed and _button == "r" or _button == "l" then
 			Emulator.mouse.isPressed = true
@@ -316,11 +320,11 @@ function love.update(dt)
 	if Emulator.mouse.isPressed then
     	local mouseX     = love.mouse.getX()
     	local mouseY     = love.mouse.getY()
-    	local termMouseX = math.floor( mouseX / Screen.pixelWidth ) + 1
-    	local termMouseY = math.floor( mouseY / Screen.pixelHeight ) + 1
+    	local termMouseX = math.bind(math.floor( (mouseX - _conf.terminal_guiScale) / Screen.pixelWidth ) + 1,1,_conf.terminal_width)
+    	local termMouseY = math.bind(math.floor( (mouseY - _conf.terminal_guiScale) / Screen.pixelHeight ) + 1,1,_conf.terminal_width)
     	if (termMouseX ~= Emulator.mouse.lastTermX or termMouseY ~= Emulator.mouse.lastTermY)
-			and (mouseX > 0 and mouseX < Screen.width * Screen.pixelWidth and
-				mouseY > 0 and mouseY < Screen.height * Screen.pixelHeight) then
+			and (mouseX > 0 and mouseX < Screen.sWidth and
+				mouseY > 0 and mouseY < Screen.sHeight) then
 
         	Emulator.mouse.lastTermX = termMouseX
        		Emulator.mouse.lastTermY = termMouseY
@@ -349,9 +353,9 @@ function love.draw()
 		Screen:draw()
 		if _conf.debugmode then
 			love.graphics.setColor({0,0,0})
-			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.width * Screen.pixelWidth) - (Screen.pixelWidth * 8), 11)
+			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.sWidth) - (Screen.pixelWidth * 8), 11)
 			love.graphics.setColor({255,255,255})
-			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.width * Screen.pixelWidth) - (Screen.pixelWidth * 8) - 1, 10)
+			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.sWidth) - (Screen.pixelWidth * 8) - 1, 10)
 		end
 	end
 	if _conf.lockfps > 0 then 

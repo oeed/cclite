@@ -13,7 +13,7 @@ The [forum topic](http://www.computercraft.info/forums2/index.php?/topic/13445-l
 
 **Screenshots:**
 
-![Demonstration](http://i.imgur.com/qC4LLGf.png)
+![Demonstration](http://i.imgur.com/WBlscYk.png)
 
 **NOTES:**
 
