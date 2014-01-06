@@ -60,7 +60,7 @@ function love.keyboard.isDown( ... )
 	end
 end
 
-function math.bind(val,lower,upper)
+local function math_bind(val,lower,upper)
 	return math.min(math.max(val,lower),upper)
 end
 
@@ -134,7 +134,7 @@ function Emulator:resume( ... )
 		Emulator:stop()
 	end
 	if not ok then
-    	print(err) -- Print to debug console, errors are handled in bios.
+    	error(err,math.huge) -- Bios was unable to handle error, crash CCLite
     end
     return ok, err
 end
@@ -192,8 +192,8 @@ function  love.mousepressed( x, y, _button )
 	if x > 0 and x < Screen.sWidth
 		and y > 0 and y < Screen.sHeight then -- Within screen bounds.
 
-		local termMouseX = math.bind(math.floor( (x - _conf.terminal_guiScale) / Screen.pixelWidth ) + 1,1,_conf.terminal_width)
-    	local termMouseY = math.bind(math.floor( (y - _conf.terminal_guiScale) / Screen.pixelHeight ) + 1,1,_conf.terminal_height)
+		local termMouseX = math_bind(math.floor( (x - _conf.terminal_guiScale) / Screen.pixelWidth ) + 1,1,_conf.terminal_width)
+    	local termMouseY = math_bind(math.floor( (y - _conf.terminal_guiScale) / Screen.pixelHeight ) + 1,1,_conf.terminal_height)
 
 		if not Emulator.mousePressed and _button == "r" or _button == "l" then
 			Emulator.mouse.isPressed = true
@@ -299,7 +299,7 @@ function love.update(dt)
 			Screen.dirty = true
 		end
 	end
-	if _conf.debugmode then
+	if _conf.cclite_showFPS then
 		if now - Emulator.lastFPS >= 1 then
 			Emulator.FPS = love.timer.getFPS()
 			Emulator.lastFPS = now
@@ -309,7 +309,7 @@ function love.update(dt)
 	
 	if #Emulator.actions.timers > 0 then
 		for k, v in pairs(Emulator.actions.timers) do
-			if now > v.expires then
+			if now >= v.expires then
 				table.insert(Emulator.eventQueue, {"timer", k})
 				Emulator.actions.timers[k] = nil
 			end
@@ -331,8 +331,8 @@ function love.update(dt)
 	if Emulator.mouse.isPressed then
     	local mouseX     = love.mouse.getX()
     	local mouseY     = love.mouse.getY()
-    	local termMouseX = math.bind(math.floor( (mouseX - _conf.terminal_guiScale) / Screen.pixelWidth ) + 1,1,_conf.terminal_width)
-    	local termMouseY = math.bind(math.floor( (mouseY - _conf.terminal_guiScale) / Screen.pixelHeight ) + 1,1,_conf.terminal_width)
+    	local termMouseX = math_bind(math.floor( (mouseX - _conf.terminal_guiScale) / Screen.pixelWidth ) + 1,1,_conf.terminal_width)
+    	local termMouseY = math_bind(math.floor( (mouseY - _conf.terminal_guiScale) / Screen.pixelHeight ) + 1,1,_conf.terminal_width)
     	if (termMouseX ~= Emulator.mouse.lastTermX or termMouseY ~= Emulator.mouse.lastTermY)
 			and (mouseX > 0 and mouseX < Screen.sWidth and
 				mouseY > 0 and mouseY < Screen.sHeight) then
@@ -346,10 +346,6 @@ function love.update(dt)
 
     local currentClock = os.clock()
 
-    -- Update internal Minecraft time.
-	Emulator.minecraft.time = (os.clock()*0.02)%24
-	Emulator.minecraft.day  = math.floor(os.clock()*0.2/60)
-
     if #Emulator.eventQueue > 0 then
 		for k, v in pairs(Emulator.eventQueue) do
 			Emulator:resume(unpack(v))
@@ -362,7 +358,7 @@ local lastFPS,fps = love.timer.getTime(),love.timer.getFPS()
 function love.draw()
 	if Screen.dirty then
 		Screen:draw()
-		if _conf.debugmode then
+		if _conf.cclite_showFPS then
 			love.graphics.setColor({0,0,0})
 			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.sWidth) - (Screen.pixelWidth * 8), 11, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 			love.graphics.setColor({255,255,255})

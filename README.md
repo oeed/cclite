@@ -13,7 +13,7 @@ The [forum topic](http://www.computercraft.info/forums2/index.php?/topic/13445-l
 
 **Screenshots:**
 
-![Demonstration](http://i.imgur.com/WBlscYk.png)
+![Demonstration](http://i.imgur.com/87PL9Nb.png)
 
 **NOTES:**
 
@@ -28,8 +28,6 @@ Add in more error checking
 
 Add in virtual redstone system
 
-Fix odd endPage bug in virtual printer.
-
 Figure out how to manage disk drives and mounting.
 
 Make Error Levels report C functions properly.
@@ -37,8 +35,6 @@ Make Error Levels report C functions properly.
 Make peripheralAttach only add valid sides.
 
 Have virtual Disk Drives work with Treasure disks
-
-Don't load HTTP apis when conf.enableAPI_http is false
 
 **Add in missing globals:**
 
