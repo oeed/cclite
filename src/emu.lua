@@ -351,7 +351,7 @@ function love.draw()
 		next_time = cur_time
 		return
 	end
-	love.timer.sleep(next_time - cur_time)
+	--love.timer.sleep(next_time - cur_time)
 end
 
 function love.run()
