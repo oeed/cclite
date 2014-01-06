@@ -162,6 +162,49 @@ local function FileBinaryWriteHandle( path, append )
 	return handle
 end
 
+-- Needed for term.write
+-- This serialzier is bad, it is supposed to be bad. Don't use it.
+local function serializeImpl( t, tTracking )	
+	local sType = type(t)
+	if sType == "table" then
+		if tTracking[t] ~= nil then
+			return nil
+		end
+		tTracking[t] = true
+		
+		local result = "{"
+		for k,v in pairs(t) do
+			local cache1 = serializeImpl(k, tTracking)
+			local cache2 = serializeImpl(v, tTracking)
+			if cache1 ~= nil and cache2 ~= nil then
+				result = result..cache1.."="..cache2..", "
+			end
+		end
+		if result:sub(-2,-1) == ", " then result = result:sub(1,-3) end
+		result = result.."}"
+		return result
+	elseif sType == "string" then
+		return t
+	elseif sType == "number" then
+		if t == math.huge then
+			return "Infinity"
+		elseif t == -math.huge then
+			return "-Infinity"
+		else
+			return tostring(t):gsub("^[^e.]+%f[^0-9.]","%1.0"):gsub("e%+","e"):upper()
+		end
+	elseif sType == "boolean" then
+		return tostring(t)
+	else
+		return nil
+	end
+end
+
+local function serialize( t )
+	local tTracking = {}
+	return serializeImpl( t, tTracking ) or ""
+end
+
 api = {}
 if _conf.compat_loadstringMask == true then
 	function api.loadstring(str, source)
@@ -226,13 +269,13 @@ function api.term.getCursorPos()
 	return api.comp.cursorX, api.comp.cursorY
 end
 function api.term.setCursorPos(x, y)
-	if not x or not y then return end
+	if type(x) ~= "number" or type(y) ~= "number" then error("Expected number, number",2) end
 	api.comp.cursorX = math.floor(x)
 	api.comp.cursorY = math.floor(y)
 	Screen.dirty = true
 end
 function api.term.write( text )
-	if not text then return end
+	text = serialize(text)
 	if api.comp.cursorY > Screen.height
 		or api.comp.cursorY < 1 then return end
 
@@ -249,12 +292,20 @@ function api.term.write( text )
 	Screen.dirty = true
 end
 function api.term.setTextColor( num )
-	if not COLOUR_CODE[num] then return end
+	if type(num) ~= "number" then error("Expected number",2) end
+	if num < 1 or num >= 65536 then
+		error("Colour out of range",2)
+	end
+	num = 2^math.floor(math.log(num)/math.log(2))
 	api.comp.fg = num
 	Screen.dirty = true
 end
 function api.term.setBackgroundColor( num )
-	if not COLOUR_CODE[num] then return end
+	if type(num) ~= "number" then error("Expected number",2) end
+	if num < 1 or num >= 65536 then
+		error("Colour out of range",2)
+	end
+	num = 2^math.floor(math.log(num)/math.log(2))
 	api.comp.bg = num
 end
 function api.term.isColor()
