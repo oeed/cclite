@@ -4,6 +4,49 @@ demand = love.thread.getChannel("demand")
 downlink = love.thread.getChannel("downlink")
 uplink = love.thread.getChannel("uplink")
 
+-- Needed for term.write
+-- This serialzier is bad, it is supposed to be bad. Don't use it.
+local function serializeImpl( t, tTracking )	
+	local sType = type(t)
+	if sType == "table" then
+		if tTracking[t] ~= nil then
+			return nil
+		end
+		tTracking[t] = true
+		
+		local result = "{"
+		for k,v in pairs(t) do
+			local cache1 = serializeImpl(k, tTracking)
+			local cache2 = serializeImpl(v, tTracking)
+			if cache1 ~= nil and cache2 ~= nil then
+				result = result..cache1.."="..cache2..", "
+			end
+		end
+		if result:sub(-2,-1) == ", " then result = result:sub(1,-3) end
+		result = result.."}"
+		return result
+	elseif sType == "string" then
+		return t
+	elseif sType == "number" then
+		if t == math.huge then
+			return "Infinity"
+		elseif t == -math.huge then
+			return "-Infinity"
+		else
+			return tostring(t):gsub("^[^e.]+%f[^0-9.]","%1.0"):gsub("e%+","e"):upper()
+		end
+	elseif sType == "boolean" then
+		return tostring(t)
+	else
+		return nil
+	end
+end
+
+local function serialize( t )
+	local tTracking = {}
+	return serializeImpl( t, tTracking ) or ""
+end
+
 api = {}
 api.comp = {
 	cursorX = 1,
@@ -38,13 +81,12 @@ function api.term.getCursorPos()
 	return api.comp.cursorX, api.comp.cursorY
 end
 function api.term.setCursorPos(x, y)
-	if not x or not y then return end
 	api.comp.cursorX = math.floor(x)
 	api.comp.cursorY = math.floor(y)
 	Screen.dirty = true
 end
 function api.term.write( text )
-	if not text then return end
+	text = serialize(text)
 	if api.comp.cursorY > Screen.height
 		or api.comp.cursorY < 1 then return end
 
@@ -61,24 +103,22 @@ function api.term.write( text )
 	Screen.dirty = true
 end
 function api.term.setTextColor( num )
-	if not COLOUR_CODE[num] then return end
+	num = 2^math.floor(math.log(num)/math.log(2))
 	api.comp.fg = num
 	Screen.dirty = true
 end
 function api.term.setBackgroundColor( num )
-	if not COLOUR_CODE[num] then return end
+	num = 2^math.floor(math.log(num)/math.log(2))
 	api.comp.bg = num
 end
 function api.term.isColor()
 	return true
 end
 function api.term.setCursorBlink( bool )
-	if type(bool) ~= "boolean" then error("Expected boolean",2) end
 	api.comp.blink = bool
 	Screen.dirty = true
 end
 function api.term.scroll( n )
-	if type(n) ~= "number" then error("Expected number",2) end
 	local textBuffer = {}
 	local backgroundColourBuffer = {}
 	local textColourBuffer = {}
@@ -154,7 +194,12 @@ function love.load()
 	
 	love.filesystem.setIdentity("ccemu")
 	
-	font = love.graphics.newFont("res/minecraft.ttf", _conf.terminal_guiScale * 8)
+	local glyphs = ""
+	for i = 32,126 do
+		glyphs = glyphs .. string.char(i)
+	end
+	font = love.graphics.newImageFont("res/minecraft.png",glyphs)
+	font:setFilter("nearest","nearest")
 	love.graphics.setFont(font)
 	
 	love.keyboard.setKeyRepeat( true )
@@ -162,6 +207,12 @@ function love.load()
 	emuThread = love.thread.newThread("emu.lua")
 	emuThread:start()
 	demand:push(_conf)
+end
+
+function love.visible(see)
+	if see then
+		Screen.dirty = true
+	end
 end
 
 function love.update()
@@ -219,7 +270,7 @@ function love.update()
 			end
 		end
 	end
-	if _conf.debugmode then
+	if _conf.cclite_showFPS then
 		if now - Emulator.lastFPS >= 1 then
 			Emulator.FPS = love.timer.getFPS()
 			Emulator.lastFPS = now
@@ -242,11 +293,11 @@ local lastFPS,fps = love.timer.getTime(),love.timer.getFPS()
 function love.draw()
 	if Screen.dirty then
 		Screen:draw()
-		if _conf.debugmode then
+		if _conf.cclite_showFPS then
 			love.graphics.setColor({0,0,0})
-			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.width * Screen.pixelWidth) - (Screen.pixelWidth * 8), 11)
+			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.sWidth) - (Screen.pixelWidth * 8), 11, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 			love.graphics.setColor({255,255,255})
-			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.width * Screen.pixelWidth) - (Screen.pixelWidth * 8) - 1, 10)
+			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.sWidth) - (Screen.pixelWidth * 8) - 1, 10, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 		end
 	end
 	if _conf.lockfps > 0 then 
@@ -259,53 +310,45 @@ function love.draw()
 	end
 end
 
+-- Use a more assumptive and non automatic screen clearing version of love.run
 function love.run()
 
-    if love.math then
-        love.math.setRandomSeed(os.time())
-    end
+    math.randomseed(os.time())
+    math.random() math.random()
 
-    if love.event then
-        love.event.pump()
-    end
+    love.event.pump()
 
-    if love.load then love.load(arg) end
+    love.load(arg)
 
     -- We don't want the first frame's dt to include time taken by love.load.
-    if love.timer then love.timer.step() end
+    love.timer.step()
 
     local dt = 0
 
     -- Main loop time.
     while true do
         -- Process events.
-        if love.event then
-            love.event.pump()
-            for e,a,b,c,d in love.event.poll() do
-                if e == "quit" then
-                    if not love.quit or not love.quit() then
-                        if love.audio then
-                            love.audio.stop()
-                        end
-                        return
-                    end
+        love.event.pump()
+        for e,a,b,c,d in love.event.poll() do
+            if e == "quit" then
+                if not love.quit or not love.quit() then
+                    return
                 end
-                love.handlers[e](a,b,c,d)
             end
+            love.handlers[e](a,b,c,d)
         end
 
         -- Update dt, as we'll be passing it to update
-        if love.timer then
-            love.timer.step()
-            dt = love.timer.getDelta()
-        end
+        love.timer.step()
+        dt = love.timer.getDelta()
 
         -- Call update and draw
-        if love.update then love.update(dt) end -- will pass 0 if love.timer is disabled
+        love.update(dt) -- will pass 0 if love.timer is disabled
+		if not love.window.isVisible() then Screen.dirty = false end
 
         if love.window and love.graphics and love.window.isCreated() then
             love.graphics.origin()
-            if love.draw then love.draw() end
+            love.draw()
             if Screen.dirty then love.graphics.present() end
 			Screen.dirty = false
         end

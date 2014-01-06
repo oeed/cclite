@@ -237,6 +237,7 @@ function api.term.getCursorPos()
 	return unpack(msg)
 end
 function api.term.setCursorPos(x, y)
+	if type(x) ~= "number" or type(y) ~= "number" then error("Expected number, number",2) end
 	uplink:push({"termSetCursorPos",x,y})
 end
 function api.term.write( text )
@@ -244,9 +245,17 @@ function api.term.write( text )
 	uplink:push({"termWrite",text})
 end
 function api.term.setTextColor( num )
+	if type(num) ~= "number" then error("Expected number",2) end
+	if num < 1 or num >= 65536 then
+		error("Colour out of range",2)
+	end
 	uplink:push({"termSetTextColor",num})
 end
 function api.term.setBackgroundColor( num )
+	if type(num) ~= "number" then error("Expected number",2) end
+	if num < 1 or num >= 65536 then
+		error("Colour out of range",2)
+	end
 	uplink:push({"termSetBackgroundColor",num})
 end
 function api.term.isColor()
@@ -342,10 +351,10 @@ function api.os.clock()
 	return math.floor(os.clock()*20)/20
 end
 function api.os.time()
-	return Emulator.minecraft.time
+	return math.floor((os.clock()*0.02)%24*1000)/1000
 end
 function api.os.day()
-	return Emulator.minecraft.day
+	return math.floor(os.clock()*0.2/60)
 end
 function api.os.setComputerLabel(label)
 	if type(label) ~= "string" and type(label) ~= "nil" then error("Expected string or nil",2) end
@@ -361,6 +370,8 @@ function api.os.queueEvent( ... )
 end
 function api.os.startTimer( nTimeout )
 	if type(nTimeout) ~= "number" then error("Expected number",2) end
+	nTimeout = math.ceil(nTimeout/20)*20
+	if nTimeout < 0.05 then nTimeout = 0.05 end
 	local timer = {
 		expires = love.timer.getTime() + nTimeout,
 	}
@@ -375,7 +386,6 @@ function api.os.setAlarm( nTime )
 	if nTime < 0 or nTime > 24 then
 		error( "Number out of range: " .. tostring( nTime ) )
 	end
-	local currentDay = Emulator.minecraft.day
 	local alarm = {
 		time = nTime,
 	}
@@ -731,8 +741,8 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 		loadstring = api.loadstring,
 		math = tablecopy(math),
 		string = tablecopy(string),
-		table = table,
-		coroutine = coroutine,
+		table = tablecopy(table),
+		coroutine = tablecopy(coroutine),
 
 		-- CC apis (BIOS completes api.)
 		term = {
