@@ -3,6 +3,26 @@
 	HTTP api may be broken?
 	including file handles.
 ]]
+
+valid_colours = {
+	[1] = true,
+	[2] = true,
+	[4] = true,
+	[8] = true,
+	[16] = true,
+	[32] = true,
+	[64] = true,
+	[128] = true,
+	[256] = true,
+	[512] = true,
+	[1024] = true,
+	[2048] = true,
+	[4096] = true,
+	[8192] = true,
+	[16384] = true,
+	[32768] = true,
+}
+
 -- HELPER FUNCTIONS
 local function lines(str)
 	local t = {}
@@ -175,10 +195,12 @@ if _conf.compat_loadstringMask == true then
 		local stat, f, err = pcall(function() return love.filesystem.load(source) end)
 		love.filesystem.remove(source)
 		if not stat then
-			if f:sub(1,14) ~= "Syntax error: " then
-				return nil, f
+			-- Fall back to old method.
+			local f, err = loadstring(str, source)
+			if f then
+				setfenv(f, api.env)
 			end
-			return nil, f:sub(15)
+			return f, err
 		end
 		if f then
 			setfenv(f, api.env)
@@ -200,102 +222,43 @@ end
 
 api.term = {}
 function api.term.clear()
-	for y = 1, Screen.height do
-		for x = 1, Screen.width do
-			Screen.textB[y][x] = " "
-			Screen.backgroundColourB[y][x] = api.comp.bg
-			Screen.textColourB[y][x] = 1 -- Don't need to bother setting text color
-		end
-	end
-	Screen.dirty = true
+	uplink:push({"termClear"})
 end
 function api.term.clearLine()
-	for x = 1, Screen.width do
-		Screen.textB[api.comp.cursorY][x] = " "
-		Screen.backgroundColourB[api.comp.cursorY][x] = api.comp.bg
-		Screen.textColourB[api.comp.cursorY][x] = 1 -- Don't need to bother setting text color
-	end
-	Screen.dirty = true
+	uplink:push({"termClearLine"})
 end
 function api.term.getSize()
-	return Screen.width, Screen.height
+	return _conf.terminal_width, _conf.terminal_height
 end
 function api.term.getCursorPos()
-	return api.comp.cursorX, api.comp.cursorY
+	-- TODO: Track this ourself
+	uplink:push({"termGetCursorPos"})
+	local msg = demand:demand()
+	return unpack(msg)
 end
 function api.term.setCursorPos(x, y)
-	if not x or not y then return end
-	api.comp.cursorX = math.floor(x)
-	api.comp.cursorY = math.floor(y)
-	Screen.dirty = true
+	uplink:push({"termSetCursorPos",x,y})
 end
 function api.term.write( text )
-	if not text then return end
-	if api.comp.cursorY > Screen.height
-		or api.comp.cursorY < 1 then return end
-
-	for i = 1, #text do
-		local char = string.sub( text, i, i )
-		if api.comp.cursorX + i - 1 <= Screen.width
-			and api.comp.cursorX + i - 1 >= 1 then
-			Screen.textB[api.comp.cursorY][api.comp.cursorX + i - 1] = char
-			Screen.textColourB[api.comp.cursorY][api.comp.cursorX + i - 1] = api.comp.fg
-			Screen.backgroundColourB[api.comp.cursorY][api.comp.cursorX + i - 1] = api.comp.bg
-		end
-	end
-	api.comp.cursorX = api.comp.cursorX + #text
-	Screen.dirty = true
+	-- TODO: Track cursor for optimization
+	uplink:push({"termWrite",text})
 end
 function api.term.setTextColor( num )
-	if not COLOUR_CODE[num] then return end
-	api.comp.fg = num
-	Screen.dirty = true
+	uplink:push({"termSetTextColor",num})
 end
 function api.term.setBackgroundColor( num )
-	if not COLOUR_CODE[num] then return end
-	api.comp.bg = num
+	uplink:push({"termSetBackgroundColor",num})
 end
 function api.term.isColor()
 	return true
 end
 function api.term.setCursorBlink( bool )
 	if type(bool) ~= "boolean" then error("Expected boolean",2) end
-	api.comp.blink = bool
-	Screen.dirty = true
+	uplink:push({"termSetCursorBlink",bool})
 end
 function api.term.scroll( n )
 	if type(n) ~= "number" then error("Expected number",2) end
-	local textBuffer = {}
-	local backgroundColourBuffer = {}
-	local textColourBuffer = {}
-	for y = 1, Screen.height do
-		if y - n > 0 and y - n <= Screen.height then
-			textBuffer[y - n] = {}
-			backgroundColourBuffer[y - n] = {}
-			textColourBuffer[y - n] = {}
-			for x = 1, Screen.width do
-				textBuffer[y - n][x] = Screen.textB[y][x]
-				backgroundColourBuffer[y - n][x] = Screen.backgroundColourB[y][x]
-				textColourBuffer[y - n][x] = Screen.textColourB[y][x]
-			end
-		end
-	end
-	for y = 1, Screen.height do
-		if textBuffer[y] ~= nil then
-			for x = 1, Screen.width do
-				Screen.textB[y][x] = textBuffer[y][x]
-				Screen.backgroundColourB[y][x] = backgroundColourBuffer[y][x]
-				Screen.textColourB[y][x] = textColourBuffer[y][x]
-			end
-		else
-			for x = 1, Screen.width do
-				Screen.textB[y][x] = " "
-				Screen.backgroundColourB[y][x] = api.comp.bg
-				Screen.textColourB[y][x] = 1 -- Don't need to bother setting text color
-			end
-		end
-	end
-	Screen.dirty = true
+	uplink:push({"termScroll",n})
 end
 
 function tablecopy(orig)

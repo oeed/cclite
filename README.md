@@ -3,6 +3,10 @@ CCLite ComputerCraft Emulator
 
 **Description:**
 
+This is an experimental branch of CCLite. The goal here is to seperate rendering and emulation so the screen can update while lua is running.
+
+It kinda currently works, but has lots of kinks and design flaws to fix. I do not recommend using this, it seems impossible to Terminate code at the moment.
+
 This is a ComputerCraft Emulator written in Love2D. It is not complete, and is still a work in progress.
 
 I will not be handing out builds for this emulator. To use it, [download Love2D 0.9.0](http://love2d.org/) and use the build_src.bat to produce a .love file.
@@ -13,7 +17,7 @@ The [forum topic](http://www.computercraft.info/forums2/index.php?/topic/13445-l
 
 **Screenshots:**
 
-![Demonstration](http://i.imgur.com/qC4LLGf.png)
+![Demonstration](http://i.imgur.com/WBlscYk.png)
 
 **NOTES:**
 
