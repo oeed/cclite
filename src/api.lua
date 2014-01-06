@@ -370,7 +370,7 @@ function api.os.queueEvent( ... )
 end
 function api.os.startTimer( nTimeout )
 	if type(nTimeout) ~= "number" then error("Expected number",2) end
-	nTimeout = math.ceil(nTimeout/20)*20
+	nTimeout = math.ceil(nTimeout*20)/20
 	if nTimeout < 0.05 then nTimeout = 0.05 end
 	local timer = {
 		expires = love.timer.getTime() + nTimeout,
