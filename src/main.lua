@@ -219,7 +219,7 @@ function love.update()
 	if _conf.lockfps > 0 then next_time = next_time + min_dt end
 	local now = love.timer.getTime()
 	if emuThread:isRunning() == false then
-		print(emuThread:getError())
+		error("[EMU] " .. emuThread:getError(),math.huge)
 	end
 	if uplink:getCount() > 0 then
 		for i = 1,uplink:getCount() do

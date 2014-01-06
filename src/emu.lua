@@ -17,6 +17,10 @@ function print(...)
 	uplink:push({"print","[EMU] ",...})
 end
 
+local function math_bind(val,lower,upper)
+	return math.min(math.max(val,lower),upper)
+end
+
 -- Load virtual peripherals.
 peripheral = {}
 local tFiles = love.filesystem.getDirectoryItems("peripheral")
