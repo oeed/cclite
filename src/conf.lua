@@ -15,7 +15,7 @@ _conf = {
 	terminal_guiScale = 2,
 
 	-- Enable Love2D console and display current FPS
-	debugmode = true,
+	debugmode = false,
 	
 	-- The FPS to lock CCLite to
 	lockfps = 20,
