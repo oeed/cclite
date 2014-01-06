@@ -148,7 +148,12 @@ function love.load()
 
 	love.filesystem.setIdentity("ccemu")
 	
-	font = love.graphics.newFont("res/minecraft.ttf", _conf.terminal_guiScale * 8)
+	local glyphs = ""
+	for i = 32,126 do
+		glyphs = glyphs .. string.char(i)
+	end
+	font = love.graphics.newImageFont("res/minecraft.png",glyphs)
+	font:setFilter("nearest","nearest")
 	love.graphics.setFont(font)
 
 	local fontObj = love.filesystem.newFile("res/font.txt", "r")
@@ -240,6 +245,12 @@ function love.keypressed(key)
 	elseif keys[key] then
    		table.insert(Emulator.eventQueue, {"key", keys[key]})
    	end
+end
+
+function love.visible(see)
+	if see then
+		Screen.dirty = true
+	end
 end
 
 --[[
@@ -353,9 +364,9 @@ function love.draw()
 		Screen:draw()
 		if _conf.debugmode then
 			love.graphics.setColor({0,0,0})
-			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.sWidth) - (Screen.pixelWidth * 8), 11)
+			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.sWidth) - (Screen.pixelWidth * 8), 11, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 			love.graphics.setColor({255,255,255})
-			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.sWidth) - (Screen.pixelWidth * 8) - 1, 10)
+			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.sWidth) - (Screen.pixelWidth * 8) - 1, 10, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 		end
 	end
 	if _conf.lockfps > 0 then 
@@ -402,6 +413,7 @@ function love.run()
 
         -- Call update and draw
         love.update(dt) -- will pass 0 if love.timer is disabled
+		if not love.window.isVisible() then Screen.dirty = false end
         love.draw()
 
         if love.timer then love.timer.sleep(0.001) end

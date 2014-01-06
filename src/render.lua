@@ -49,7 +49,6 @@ Screen = {
 	pixelWidth = _conf.terminal_guiScale * 6,
 	pixelHeight = _conf.terminal_guiScale * 9,
 	showCursor = false,
-	textOffset = math.floor(_conf.terminal_guiScale*-1.5), -- Correction to align font. TODO: This is correct up to 5.
 	lastCursor = nil,
 	dirty = true,
 	tOffset = {},
@@ -67,7 +66,7 @@ function Screen:init()
 	end
 
 	self.font = love.graphics.getFont()
-	for i = 32,126 do self.tOffset[string.char(i)] = math.floor(self.pixelWidth / 4 - self.font:getWidth(string.char(i)) / 4) * 2 end
+	for i = 32,126 do self.tOffset[string.char(i)] = math.floor(3 - self.font:getWidth(string.char(i)) / 2) * _conf.terminal_guiScale end
 	self.tOffset["@"] = 0
 	self.tOffset["~"] = 0
 	self.dirty = true
@@ -115,22 +114,21 @@ function Screen:draw()
 	for y = 0, self.height - 1 do
 		for x = 0, self.width - 1 do
 			local text = self.textB[y + 1][x + 1]
-			local sByte = string.byte(text)
-			if sByte == 9 then
-				text = " "
-			elseif sByte < 32 or sByte > 126 or sByte == 96 then
-				text = "?"
-			end
-			if text ~= " " then
+			if text ~= " " and text ~= "\t" then
+				local sByte = string.byte(text)
+				if sByte == 9 then
+					text = " "
+				elseif sByte < 32 or sByte > 126 or sByte == 96 then
+					text = "?"
+				end
 				setColor( COLOUR_CODE[ self.textColourB[y + 1][x + 1] ] )
-				lprint( text, (x * self.pixelWidth) + tOffset[text] + _conf.terminal_guiScale, (y * self.pixelHeight) + self.textOffset)
+				lprint( text, x * self.pixelWidth + tOffset[text] + _conf.terminal_guiScale, y * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 			end
 		end
 	end
 
 	if api.comp.blink and self.showCursor then
-		local offset = self.pixelWidth / 2 - self.font:getWidth("_") / 2
 		setColor(COLOUR_CODE[ api.comp.fg ])
-		lprint("_", (api.comp.cursorX - 1) * self.pixelWidth + offset, (api.comp.cursorY - 1) * self.pixelHeight + self.textOffset)
+		lprint("_", (api.comp.cursorX - 1) * self.pixelWidth + tOffset["_"] + _conf.terminal_guiScale, (api.comp.cursorY - 1) * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 	end
 end
