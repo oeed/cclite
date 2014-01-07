@@ -224,8 +224,9 @@ function love.mousepressed(x, y, _button)
 
 		if not Emulator.mousePressed and _button == "r" or _button == "l" then
 			Emulator.mouse.isPressed = true
-			local button = _button == "r" and 2 or 1
-			table.insert(Emulator.eventQueue, {"mouse_click", button, termMouseX, termMouseY})
+			Emulator.mouse.lastTermX = termMouseX
+			Emulator.mouse.lastTermY = termMouseY
+			table.insert(Emulator.eventQueue, {"mouse_click", _button == "r" and 2 or 1, termMouseX, termMouseY})
 
 		elseif _button == "wu" then -- Scroll up
 			table.insert(Emulator.eventQueue, {"mouse_scroll", -1, termMouseX, termMouseX})

@@ -334,7 +334,7 @@ function love.update()
 	updateShortcut("reboot",    "ctrl", "r", function()
 			Emulator:stop( true )
 		end)
-	if Emulator.reboot then print("REBOOT") Emulator:start() end
+	if Emulator.reboot then Emulator:start() end
 	if _conf.cclite_showFPS then
 		if now - Emulator.lastFPS >= 1 then
 			Emulator.FPS = love.timer.getFPS()
