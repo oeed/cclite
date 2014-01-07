@@ -225,7 +225,7 @@ function love.keypressed(key, isrepeat)
 	elseif Emulator.actions.reboot == nil   and love.keyboard.isDown("ctrl") and not isrepeat and key == "r" then
 		Emulator.actions.reboot =    love.timer.getTime()
 	else -- Ignore key shortcuts before "press any key" action. TODO: This might be slightly buggy!
-		if not Emulator.running then
+		if not Emulator.running and not isrepeat then
 			Emulator:start()
 			return
 		end
@@ -242,7 +242,7 @@ function love.keypressed(key, isrepeat)
 		for i = 1,#cliptext do
 			love.textinput(cliptext:sub(i,i))
 		end
-	elseif isrepeat and love.keyboard.isDown("ctrl") and (key == "t" key == "s" or key == "r") then
+	elseif isrepeat and love.keyboard.isDown("ctrl") and (key == "t" or key == "s" or key == "r") then
 	elseif keys[key] then
    		table.insert(Emulator.eventQueue, {"key", keys[key]})
    	end
