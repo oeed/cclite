@@ -5,6 +5,7 @@ _conf = demand:demand()
 require("love.filesystem")
 require("love.timer")
 require("love.mouse")
+require("love.system")
 --require("love.keyboard")
 require('api')
 bit = require("bit")
@@ -69,11 +70,14 @@ keys = {
 }
 
 -- Fake love.keyboard
+_kbdcache = {} -- Cache keyboard events for the current loop.
 love.keyboard = {}
 function love.keyboard.isDown(key)
-	uplink:push({"isDown",key})
-	local msg = demand:demand()
-	return msg
+	if _kbdcache[key] == nil then
+		uplink:push({"isDown",key})
+		_kbdcache[key] = demand:demand()
+	end
+	return _kbdcache[key]
 end
 --[[
 -- Fake love.mouse
@@ -104,6 +108,7 @@ Screen = {
 
 Emulator = {
 	running = false,
+	killself = 0,
 	actions = { -- Keyboard commands i.e. ctrl + s and timers/alarms
 		terminate = nil,
 		timers = {},
@@ -161,6 +166,8 @@ function Emulator:resume( ... )
 	debug.sethook(self.proc,function() if murder:pop() ~= nil then crash() end end,"",100)
 	local ok, err = coroutine.resume(self.proc, ...)
 	debug.sethook(self.proc)
+	if Emulator.killself ~= 0 then Emulator:stop(Emulator.killself == 2) end
+	_kbdcache = {}
 	if not self.proc then return end -- Emulator:stop could be called within the coroutine resulting in proc being nil
 	if coroutine.status(self.proc) == "dead" then -- Which could cause an error here
 		Emulator:stop()
@@ -237,8 +244,8 @@ function love.textinput(unicode)
     end
 end
 
-function love.keypressed(key)
-	if Emulator.actions.terminate == nil    and love.keyboard.isDown("ctrl") and key == "t" then
+function love.keypressed(key, isrepeat)
+	if Emulator.actions.terminate == nil and love.keyboard.isDown("ctrl") and not isrepeat and key == "t" then
 		Emulator.actions.terminate = love.timer.getTime()
 	end
 
@@ -253,6 +260,7 @@ function love.keypressed(key)
 		for i = 1,#cliptext do
 			love.textinput(cliptext:sub(i,i))
 		end
+	elseif isrepeat and love.keyboard.isDown("ctrl") and key == "t" then
 	elseif keys[key] then
    		table.insert(Emulator.eventQueue, {"key", keys[key]})
    	end
@@ -335,6 +343,7 @@ function love.draw()
 		return
 	end
 	love.timer.sleep(next_time - cur_time)
+	_kbdcache = {}
 end
 
 function love.run()
@@ -362,7 +371,7 @@ function love.run()
 				elseif msg[1] == "textinput" then
 					love.textinput(msg[2])
 				elseif msg[1] == "keypressed" then
-					love.keypressed(msg[2])
+					love.keypressed(msg[2],msg[3])
 				else
 					print("Unknown cmd: " .. msg[1])
 				end

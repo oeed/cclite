@@ -206,16 +206,17 @@ function love.textinput(unicode)
 	downlink:push({"textinput",unicode})
 end
 
-function love.keypressed(key)
-	if Emulator.actions.shutdown == nil and love.keyboard.isDown("ctrl") and key == "s" then
+function love.keypressed(key, isrepeat)
+	if Emulator.actions.shutdown == nil and love.keyboard.isDown("ctrl") and not isrepeat and key == "s" then
 		Emulator.actions.shutdown =  love.timer.getTime()
-	elseif Emulator.actions.reboot == nil   and love.keyboard.isDown("ctrl") and key == "r" then
+	elseif Emulator.actions.reboot == nil and love.keyboard.isDown("ctrl") and not isrepeat and key == "r" then
 		Emulator.actions.reboot =    love.timer.getTime()
 	end
-	if Emulator.running == false then
+	if Emulator.running == false and not isrepeat then
 		Emulator:start()
+	elseif isrepeat and love.keyboard.isDown("ctrl") and (key == "s" or key == "r") then
 	else
-		downlink:push({"keypressed",key})
+		downlink:push({"keypressed",key,isrepeat})
 	end
 end
 
@@ -265,7 +266,11 @@ function love.update()
 	if _conf.lockfps > 0 then next_time = next_time + min_dt end
 	local now = love.timer.getTime()
 	if emuThread:isRunning() == false and Emulator.running == true then
-		print("[EMU] " .. emuThread:getError(),math.huge)
+		local errStr = emuThread:getError()
+		print("[EMU] " .. errStr)
+		if errStr ~= "emu.lua:1: GOODBYE WORLD" then
+			error("[EMU] " .. errStr,math.huge)
+		end
 		Emulator.reboot = false
 		Emulator.running = false
 		Emulator.actions.shutdown = nil
@@ -329,7 +334,7 @@ function love.update()
 	updateShortcut("reboot",    "ctrl", "r", function()
 			Emulator:stop( true )
 		end)
-	if Emulator.reboot then Emulator:start() end
+	if Emulator.reboot then print("REBOOT") Emulator:start() end
 	if _conf.cclite_showFPS then
 		if now - Emulator.lastFPS >= 1 then
 			Emulator.FPS = love.timer.getFPS()

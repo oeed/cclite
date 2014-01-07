@@ -396,10 +396,16 @@ function api.os.setAlarm( nTime )
 	return nil -- Error
 end
 function api.os.shutdown()
-	Emulator:stop()
+	Emulator.killself = 1
+	while true do
+		coroutine.yield()
+	end
 end
 function api.os.reboot()
-	Emulator:stop( true ) -- Reboots on next update/tick
+	Emulator.killself = 2
+	while true do
+		coroutine.yield()
+	end
 end
 
 api.peripheral = {}
