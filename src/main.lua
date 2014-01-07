@@ -399,6 +399,8 @@ function love.run()
 			lastDraw = love.timer.getTime()
         end
 
+		love.timer.sleep(0.001)
+
     end
 
 end

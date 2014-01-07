@@ -31,7 +31,7 @@ _conf = {
 }
 function love.conf(t)
 	t.identify = "ccemu"
-	t.console = true -- Enable this if you want, its not helpful anymore.
+	t.console = false -- Enable this if you want, its not helpful anymore.
     t.window.title = "ComputerCraft Emulator"
 	t.window.icon = "res/icon.png"
 	t.window.width = (_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)

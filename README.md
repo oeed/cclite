@@ -5,7 +5,7 @@ CCLite ComputerCraft Emulator
 
 This is an experimental branch of CCLite. The goal here is to seperate rendering and emulation so the screen can update while lua is running.
 
-It kinda currently works, but has lots of kinks and design flaws to fix. I do not recommend using this, it seems impossible to Terminate code at the moment.
+It kinda currently works, but is currently being held together with duct tape. It works. But it may be potentially slower (lua speed wise, renderer is still fast as ever!)
 
 This is a ComputerCraft Emulator written in Love2D. It is not complete, and is still a work in progress.
 
