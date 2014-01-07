@@ -28,6 +28,10 @@ _conf = {
 	
 	-- Mask [string "source"] from loadstring
 	compat_loadstringMask = true,
+	
+	-- Max number of messages to have in the uplink channnel
+	-- Increase this value at cost of render performance.
+	cclite_maxMessages = 1000,
 }
 function love.conf(t)
 	t.identify = "ccemu"

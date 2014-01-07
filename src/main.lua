@@ -5,49 +5,6 @@ downlink = love.thread.getChannel("downlink")
 uplink = love.thread.getChannel("uplink")
 murder = love.thread.getChannel("murder")
 
--- Needed for term.write
--- This serialzier is bad, it is supposed to be bad. Don't use it.
-local function serializeImpl( t, tTracking )	
-	local sType = type(t)
-	if sType == "table" then
-		if tTracking[t] ~= nil then
-			return nil
-		end
-		tTracking[t] = true
-		
-		local result = "{"
-		for k,v in pairs(t) do
-			local cache1 = serializeImpl(k, tTracking)
-			local cache2 = serializeImpl(v, tTracking)
-			if cache1 ~= nil and cache2 ~= nil then
-				result = result..cache1.."="..cache2..", "
-			end
-		end
-		if result:sub(-2,-1) == ", " then result = result:sub(1,-3) end
-		result = result.."}"
-		return result
-	elseif sType == "string" then
-		return t
-	elseif sType == "number" then
-		if t == math.huge then
-			return "Infinity"
-		elseif t == -math.huge then
-			return "-Infinity"
-		else
-			return tostring(t):gsub("^[^e.]+%f[^0-9.]","%1.0"):gsub("e%+","e"):upper()
-		end
-	elseif sType == "boolean" then
-		return tostring(t)
-	else
-		return nil
-	end
-end
-
-local function serialize( t )
-	local tTracking = {}
-	return serializeImpl( t, tTracking ) or ""
-end
-
 api = {}
 api.comp = {
 	cursorX = 1,
@@ -87,10 +44,6 @@ function api.term.setCursorPos(x, y)
 	Screen.dirty = true
 end
 function api.term.write( text )
-	text = serialize(text)
-	if api.comp.cursorY > Screen.height
-		or api.comp.cursorY < 1 then return end
-
 	for i = 1, #text do
 		local char = string.sub( text, i, i )
 		if api.comp.cursorX + i - 1 <= Screen.width
@@ -177,6 +130,8 @@ Emulator = {
 
 function Emulator:start()
 	if emuThread ~= nil and emuThread:isRunning() then return end
+	murder:clear()
+	demand:clear()
 	self.reboot = false
 	self.running = true
 	emuThread = love.thread.newThread("emu.lua")
@@ -185,7 +140,7 @@ function Emulator:start()
 end
 
 function Emulator:stop( reboot )
-	murder:push("DIE")
+	murder:push(reboot)
 	self.reboot = reboot
 	self.running = false
 	
@@ -277,8 +232,10 @@ function love.update()
 		Emulator.actions.reboot = nil
 	end
 	if uplink:getCount() > 0 then
+		print(uplink:getCount())
 		for i = 1,uplink:getCount() do
 			local msg = uplink:pop()
+			print(msg[1])
 			if msg[1] == "print" then
 				print(unpack(msg,2))
 			elseif msg[1] == "dead" then
@@ -301,8 +258,6 @@ function love.update()
 				api.term.clear()
 			elseif msg[1] == "termClearLine" then
 				api.term.clearLine()
-			elseif msg[1] == "termGetCursorPos" then
-				demand:push({api.term.getCursorPos()})
 			elseif msg[1] == "termSetCursorPos" then
 				api.term.setCursorPos(msg[2],msg[3])
 			elseif msg[1] == "termWrite" then
@@ -317,19 +272,13 @@ function love.update()
 				api.term.scroll(msg[2])
 			elseif msg[1] == "isDown" then
 				demand:push(love.keyboard.isDown(msg[2]))
-			elseif msg[1] == "getX" then
-				demand:push(love.mouse.getX())
-			elseif msg[1] == "getY" then
-				demand:push(love.mouse.getY())
-			elseif msg[1] == "mouseIsDown" then
-				demand:push(love.mouse.isDown(msg[2]))
 			else
 				print("Unknown data: " .. table.concat(msg,", "))
 			end
 		end
 	end
 	updateShortcut("shutdown",  "ctrl", "s", function()
-			Emulator:stop()
+			Emulator:stop( false )
 		end)
 	updateShortcut("reboot",    "ctrl", "r", function()
 			Emulator:stop( true )

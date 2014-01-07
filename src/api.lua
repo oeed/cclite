@@ -182,6 +182,57 @@ local function FileBinaryWriteHandle( path, append )
 	return handle
 end
 
+-- Needed for term.write
+-- This serialzier is bad, it is supposed to be bad. Don't use it.
+local function serializeImpl( t, tTracking )	
+	local sType = type(t)
+	if sType == "table" then
+		if tTracking[t] ~= nil then
+			return nil
+		end
+		tTracking[t] = true
+		
+		local result = "{"
+		for k,v in pairs(t) do
+			local cache1 = serializeImpl(k, tTracking)
+			local cache2 = serializeImpl(v, tTracking)
+			if cache1 ~= nil and cache2 ~= nil then
+				result = result..cache1.."="..cache2..", "
+			end
+		end
+		if result:sub(-2,-1) == ", " then result = result:sub(1,-3) end
+		result = result.."}"
+		return result
+	elseif sType == "string" then
+		return t
+	elseif sType == "number" then
+		if t == math.huge then
+			return "Infinity"
+		elseif t == -math.huge then
+			return "-Infinity"
+		else
+			return tostring(t):gsub("^[^e.]+%f[^0-9.]","%1.0"):gsub("e%+","e"):upper()
+		end
+	elseif sType == "boolean" then
+		return tostring(t)
+	else
+		return nil
+	end
+end
+
+local function serialize( t )
+	local tTracking = {}
+	return serializeImpl( t, tTracking ) or ""
+end
+
+local function uplink_push(obj)
+	if uplink:getCount() > _conf.cclite_maxMessages then
+		uplink:supply(obj)
+	else
+		uplink:push(obj)
+	end
+end
+
 api = {}
 if _conf.compat_loadstringMask == true then
 	function api.loadstring(str, source)
@@ -222,52 +273,54 @@ end
 
 api.term = {}
 function api.term.clear()
-	uplink:push({"termClear"})
+	uplink_push({"termClear"})
 end
 function api.term.clearLine()
-	uplink:push({"termClearLine"})
+	uplink_push({"termClearLine"})
 end
 function api.term.getSize()
 	return _conf.terminal_width, _conf.terminal_height
 end
 function api.term.getCursorPos()
-	-- TODO: Track this ourself
-	uplink:push({"termGetCursorPos"})
-	local msg = demand:demand()
-	return unpack(msg)
+	return api.comp.cursorX, api.comp.cursorY
 end
 function api.term.setCursorPos(x, y)
 	if type(x) ~= "number" or type(y) ~= "number" then error("Expected number, number",2) end
-	uplink:push({"termSetCursorPos",x,y})
+	api.comp.cursorX = math.floor(x)
+	api.comp.cursorY = math.floor(y)
+	uplink_push({"termSetCursorPos",x,y})
 end
 function api.term.write( text )
-	-- TODO: Track cursor for optimization
-	uplink:push({"termWrite",text})
+	if api.comp.cursorY > _conf.terminal_height	or api.comp.cursorY < 1 then return end
+	text = serialize(text)
+		
+	api.comp.cursorX = api.comp.cursorX + #text
+	uplink_push({"termWrite",text})
 end
 function api.term.setTextColor( num )
 	if type(num) ~= "number" then error("Expected number",2) end
 	if num < 1 or num >= 65536 then
 		error("Colour out of range",2)
 	end
-	uplink:push({"termSetTextColor",num})
+	uplink_push({"termSetTextColor",num})
 end
 function api.term.setBackgroundColor( num )
 	if type(num) ~= "number" then error("Expected number",2) end
 	if num < 1 or num >= 65536 then
 		error("Colour out of range",2)
 	end
-	uplink:push({"termSetBackgroundColor",num})
+	uplink_push({"termSetBackgroundColor",num})
 end
 function api.term.isColor()
 	return true
 end
 function api.term.setCursorBlink( bool )
 	if type(bool) ~= "boolean" then error("Expected boolean",2) end
-	uplink:push({"termSetCursorBlink",bool})
+	uplink_push({"termSetCursorBlink",bool})
 end
 function api.term.scroll( n )
 	if type(n) ~= "number" then error("Expected number",2) end
-	uplink:push({"termScroll",n})
+	uplink_push({"termScroll",n})
 end
 
 function tablecopy(orig)

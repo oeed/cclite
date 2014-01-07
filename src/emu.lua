@@ -2,6 +2,8 @@ function crash() error("GOODBYE WORLD") end
 demand = love.thread.getChannel("demand")
 _conf = demand:demand()
 
+jit.off() -- Required for "Too long without yielding"
+
 require("love.filesystem")
 require("love.timer")
 require("love.mouse")
@@ -15,9 +17,10 @@ downlink = love.thread.getChannel("downlink")
 uplink = love.thread.getChannel("uplink")
 murder = love.thread.getChannel("murder")
 
--- Patch print to hook up to the console.
+-- Patch print to identify where the message came from.
+local _print = print
 function print(...)
-	uplink:push({"print","[EMU] ",...})
+	_print("[EMU] ",...)
 end
 
 local function math_bind(val,lower,upper)
@@ -79,25 +82,6 @@ function love.keyboard.isDown(key)
 	end
 	return _kbdcache[key]
 end
---[[
--- Fake love.mouse
-love.mouse = {}
-function love.mouse.getX()
-	uplink:push({"getX"})
-	local msg = demand:demand()
-	return msg
-end
-function love.mouse.getY()
-	uplink:push({"getY"})
-	local msg = demand:demand()
-	return msg
-end
-function love.mouse.isDown(button)
-	uplink:push({"mouseIsDown",button})
-	local msg = demand:demand()
-	return msg
-end
-]]
 
 Screen = {
 	sWidth = (_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2),
@@ -163,7 +147,7 @@ end
 function Emulator:resume( ... )
 	if not self.running then return end
 	debug.sethook(self.proc,function() error("Too long without yielding",2) end,"",1e8)
-	debug.sethook(self.proc,function() if murder:pop() ~= nil then crash() end end,"",100)
+	debug.sethook(self.proc,function() local a = murder:pop() if a ~= nil then api.os[a == true and "reboot" or "shutdown"]() end end,"",100)
 	local ok, err = coroutine.resume(self.proc, ...)
 	debug.sethook(self.proc)
 	if Emulator.killself ~= 0 then Emulator:stop(Emulator.killself == 2) end
@@ -179,7 +163,6 @@ function Emulator:resume( ... )
 end
 
 function love.load()
-	jit.off() -- Required for "Too long without yielding"
 	if _conf.lockfps > 0 then 
 		min_dt = 1/_conf.lockfps
 		next_time = love.timer.getTime()
@@ -354,8 +337,6 @@ function love.run()
 	
 	love.load(arg)
 	
-	local dt = 0
-	
 	love.timer.step()
 
 	-- Main loop time.
@@ -381,12 +362,11 @@ function love.run()
 		
         -- Update dt, as we'll be passing it to update
 		love.timer.step()
-        dt = love.timer.getDelta()
-		
+
 		-- Call update
         love.update(dt) -- will pass 0 if love.timer is disabled
 		love.draw()
-
+		
 		love.timer.sleep(0.001)
 		
 	end
