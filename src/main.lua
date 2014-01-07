@@ -289,28 +289,18 @@ function love.update()
 	end
 end
 
-local lastFPS,fps = love.timer.getTime(),love.timer.getFPS()
 function love.draw()
-	if Screen.dirty then
-		Screen:draw()
-		if _conf.cclite_showFPS then
-			love.graphics.setColor({0,0,0})
-			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.sWidth) - (Screen.pixelWidth * 8), 11, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
-			love.graphics.setColor({255,255,255})
-			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.sWidth) - (Screen.pixelWidth * 8) - 1, 10, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
-		end
-	end
-	if _conf.lockfps > 0 then 
-		local cur_time = love.timer.getTime()
-		if next_time <= cur_time then
-			next_time = cur_time
-			return
-		end
-		--love.timer.sleep(next_time - cur_time)
+	Screen:draw()
+	if _conf.cclite_showFPS then
+		love.graphics.setColor({0,0,0})
+		love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.sWidth) - (Screen.pixelWidth * 8), 11, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
+		love.graphics.setColor({255,255,255})
+		love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.sWidth) - (Screen.pixelWidth * 8) - 1, 10, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 	end
 end
 
 -- Use a more assumptive and non automatic screen clearing version of love.run
+local lastDraw = love.timer.getTime()
 function love.run()
 
     math.randomseed(os.time())
@@ -319,11 +309,6 @@ function love.run()
     love.event.pump()
 
     love.load(arg)
-
-    -- We don't want the first frame's dt to include time taken by love.load.
-    love.timer.step()
-
-    local dt = 0
 
     -- Main loop time.
     while true do
@@ -338,22 +323,17 @@ function love.run()
             love.handlers[e](a,b,c,d)
         end
 
-        -- Update dt, as we'll be passing it to update
-        love.timer.step()
-        dt = love.timer.getDelta()
-
         -- Call update and draw
-        love.update(dt) -- will pass 0 if love.timer is disabled
+        love.update()
 		if not love.window.isVisible() then Screen.dirty = false end
 
-        if love.window and love.graphics and love.window.isCreated() then
-            love.graphics.origin()
-            love.draw()
-            if Screen.dirty then love.graphics.present() end
+        if love.window.isCreated() and Screen.dirty and love.timer.getTime() - lastDraw >= 1/20 then
+			love.draw()
+			love.graphics.present()
 			Screen.dirty = false
+			lastDraw = love.timer.getTime()
         end
 
-        if love.timer then love.timer.sleep(0.001) end
     end
 
 end

@@ -18,7 +18,7 @@ _conf = {
 	cclite_showFPS = true,
 	
 	-- The FPS to lock CCLite to
-	lockfps = 0,
+	lockfps = 20,
 	
 	-- Enable emulation of buggy Clipboard handling
 	compat_faultyClip = true,

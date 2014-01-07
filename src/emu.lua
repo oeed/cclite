@@ -4,7 +4,7 @@ _conf = demand:demand()
 require("love.filesystem")
 require("love.timer")
 require("love.mouse")
-require("love.keyboard")
+--require("love.keyboard")
 require('api')
 bit = require("bit")
 if _conf.enableAPI_http == true then require('http.HttpRequest') end
@@ -66,7 +66,6 @@ keys = {
 	["lalt"] = 56,
 }
 
---[[
 -- Fake love.keyboard
 love.keyboard = {}
 function love.keyboard.isDown(key)
@@ -74,7 +73,7 @@ function love.keyboard.isDown(key)
 	local msg = demand:demand()
 	return msg
 end
-
+--[[
 -- Fake love.mouse
 love.mouse = {}
 function love.mouse.getX()
@@ -163,7 +162,7 @@ end
 
 function Emulator:resume( ... )
 	if not self.running then return end
-	debug.sethook(self.proc,function() error("Too long without yielding",2) end,"",1e9)
+	debug.sethook(self.proc,function() error("Too long without yielding",2) end,"",1e8)
 	local ok, err = coroutine.resume(self.proc, ...)
 	debug.sethook(self.proc)
 	if not self.proc then return end -- Emulator:stop could be called within the coroutine resulting in proc being nil
@@ -362,6 +361,8 @@ function love.run()
 	love.load(arg)
 	
 	local dt = 0
+	
+	love.timer.step()
 
 	-- Main loop time.
 	while true do
@@ -384,13 +385,15 @@ function love.run()
 		end
 		
         -- Update dt, as we'll be passing it to update
+		love.timer.step()
         dt = love.timer.getDelta()
 		
 		-- Call update
         love.update(dt) -- will pass 0 if love.timer is disabled
 		love.draw()
+
+		love.timer.sleep(0.001)
 		
-		if love.timer then love.timer.sleep(0.001) end
 	end
 	
 end
