@@ -18,7 +18,7 @@ _conf = {
 	cclite_showFPS = true,
 	
 	-- The FPS to lock CCLite to
-	lockfps = 20,
+	lockfps = 40,
 	
 	-- Enable emulation of buggy Clipboard handling
 	compat_faultyClip = true,
@@ -31,7 +31,7 @@ _conf = {
 }
 function love.conf(t)
 	t.identify = "ccemu"
-	t.console = false -- Enable this if you want, its not helpful anymore.
+	t.console = true -- Enable this if you want, its not helpful anymore.
     t.window.title = "ComputerCraft Emulator"
 	t.window.icon = "res/icon.png"
 	t.window.width = (_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2)

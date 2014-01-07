@@ -3,6 +3,7 @@ require('render')
 demand = love.thread.getChannel("demand")
 downlink = love.thread.getChannel("downlink")
 uplink = love.thread.getChannel("uplink")
+murder = love.thread.getChannel("murder")
 
 -- Needed for term.write
 -- This serialzier is bad, it is supposed to be bad. Don't use it.
@@ -164,10 +165,34 @@ function love.keyboard.isDown( ... )
 end
 
 Emulator = {
+	actions = {
+		shutdown = nil,
+		reboot = nil,
+	},
+	reboot = false, -- Tells update loop to start Emulator automatically
 	running = false,
 	FPS = 0,
 	lastFPS = love.timer.getTime(),
 }
+
+function Emulator:start()
+	if emuThread ~= nil and emuThread:isRunning() then return end
+	self.reboot = false
+	self.running = true
+	emuThread = love.thread.newThread("emu.lua")
+	emuThread:start()
+	demand:push(_conf)
+end
+
+function Emulator:stop( reboot )
+	murder:push("DIE")
+	self.reboot = reboot
+	self.running = false
+	
+	-- Reset events/key shortcuts
+	self.actions.shutdown = nil
+	self.actions.reboot = nil
+end
 
 function love.mousereleased(x, y, _button)
 	downlink:push({"mousereleased",x, y, _button})
@@ -182,7 +207,16 @@ function love.textinput(unicode)
 end
 
 function love.keypressed(key)
-	downlink:push({"keypressed",key})
+	if Emulator.actions.shutdown == nil and love.keyboard.isDown("ctrl") and key == "s" then
+		Emulator.actions.shutdown =  love.timer.getTime()
+	elseif Emulator.actions.reboot == nil   and love.keyboard.isDown("ctrl") and key == "r" then
+		Emulator.actions.reboot =    love.timer.getTime()
+	end
+	if Emulator.running == false then
+		Emulator:start()
+	else
+		downlink:push({"keypressed",key})
+	end
 end
 
 function love.load()
@@ -204,9 +238,8 @@ function love.load()
 	
 	love.keyboard.setKeyRepeat( true )
 	
-	emuThread = love.thread.newThread("emu.lua")
-	emuThread:start()
-	demand:push(_conf)
+	Emulator:start()
+	
 end
 
 function love.visible(see)
@@ -215,19 +248,39 @@ function love.visible(see)
 	end
 end
 
+function updateShortcut(name, key1, key2, cb)
+	if Emulator.actions[name] ~= nil then
+		if love.keyboard.isDown(key1) and love.keyboard.isDown(key2) then
+			if love.timer.getTime() - Emulator.actions[name] > 1 then
+				Emulator.actions[name] = nil
+				if cb then cb() end
+			end
+		else
+			Emulator.actions[name] = nil
+		end
+	end
+end
+
 function love.update()
 	if _conf.lockfps > 0 then next_time = next_time + min_dt end
 	local now = love.timer.getTime()
-	if emuThread:isRunning() == false then
-		error("[EMU] " .. emuThread:getError(),math.huge)
+	if emuThread:isRunning() == false and Emulator.running == true then
+		print("[EMU] " .. emuThread:getError(),math.huge)
+		Emulator.reboot = false
+		Emulator.running = false
+		Emulator.actions.shutdown = nil
+		Emulator.actions.reboot = nil
 	end
 	if uplink:getCount() > 0 then
 		for i = 1,uplink:getCount() do
 			local msg = uplink:pop()
 			if msg[1] == "print" then
 				print(unpack(msg,2))
-			elseif msg[1] == "running" then
-				Emulator.running = msg[2]
+			elseif msg[1] == "dead" then
+				Emulator.reboot = msg[2]
+				Emulator.running = false
+				Emulator.actions.shutdown = nil
+				Emulator.actions.reboot = nil
 			elseif msg[1] == "initScreen" then
 				api.comp = {
 					cursorX = 1,
@@ -270,6 +323,13 @@ function love.update()
 			end
 		end
 	end
+	updateShortcut("shutdown",  "ctrl", "s", function()
+			Emulator:stop()
+		end)
+	updateShortcut("reboot",    "ctrl", "r", function()
+			Emulator:stop( true )
+		end)
+	if Emulator.reboot then Emulator:start() end
 	if _conf.cclite_showFPS then
 		if now - Emulator.lastFPS >= 1 then
 			Emulator.FPS = love.timer.getFPS()
@@ -327,7 +387,7 @@ function love.run()
         love.update()
 		if not love.window.isVisible() then Screen.dirty = false end
 
-        if love.window.isCreated() and Screen.dirty and love.timer.getTime() - lastDraw >= 1/20 then
+        if love.window.isCreated() and Screen.dirty and love.timer.getTime() - lastDraw >= 0.05 then
 			love.draw()
 			love.graphics.present()
 			Screen.dirty = false

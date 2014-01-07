@@ -1,3 +1,4 @@
+function crash() error("GOODBYE WORLD") end
 demand = love.thread.getChannel("demand")
 _conf = demand:demand()
 
@@ -11,6 +12,7 @@ if _conf.enableAPI_http == true then require('http.HttpRequest') end
 
 downlink = love.thread.getChannel("downlink")
 uplink = love.thread.getChannel("uplink")
+murder = love.thread.getChannel("murder")
 
 -- Patch print to hook up to the console.
 function print(...)
@@ -102,11 +104,8 @@ Screen = {
 
 Emulator = {
 	running = false,
-	reboot = false, -- Tells update loop to start Emulator automatically
 	actions = { -- Keyboard commands i.e. ctrl + s and timers/alarms
 		terminate = nil,
-		shutdown = nil,
-		reboot = nil,
 		timers = {},
 		alarms = {},
 	},
@@ -124,7 +123,6 @@ Emulator = {
 }
 
 function Emulator:start()
-	self.reboot = false
 	api.init()
 	uplink:push({"initScreen"})
 
@@ -140,29 +138,27 @@ function Emulator:start()
 
 	self.proc = coroutine.create(fn)
 	self.running = true
-	uplink:push({"running",self.running})
 	self:resume({})
 end
 
 function Emulator:stop( reboot )
 	self.proc = nil
 	self.running = false
-	uplink:push({"running",self.running})
-	self.reboot = reboot
+	uplink:push({"dead",reboot})
 	uplink:push({"dirtyScreen"})
 
 	-- Reset events/key shortcuts
 	self.actions.terminate = nil
-	self.actions.shutdown = nil
-	self.actions.reboot = nil
 	self.actions.timers = {}
 	self.actions.alarms = {}
 	self.eventQueue = {}
+	crash()
 end
 
 function Emulator:resume( ... )
 	if not self.running then return end
 	debug.sethook(self.proc,function() error("Too long without yielding",2) end,"",1e8)
+	debug.sethook(self.proc,function() if murder:pop() ~= nil then crash() end end,"",100)
 	local ok, err = coroutine.resume(self.proc, ...)
 	debug.sethook(self.proc)
 	if not self.proc then return end -- Emulator:stop could be called within the coroutine resulting in proc being nil
@@ -177,7 +173,10 @@ end
 
 function love.load()
 	jit.off() -- Required for "Too long without yielding"
-	next_time = love.timer.getTime()
+	if _conf.lockfps > 0 then 
+		min_dt = 1/_conf.lockfps
+		next_time = love.timer.getTime()
+	end
 
 	local fontObj = love.filesystem.newFile("res/font.txt", "r")
 	local fontPack = ""
@@ -241,15 +240,6 @@ end
 function love.keypressed(key)
 	if Emulator.actions.terminate == nil    and love.keyboard.isDown("ctrl") and key == "t" then
 		Emulator.actions.terminate = love.timer.getTime()
-	elseif Emulator.actions.shutdown == nil and love.keyboard.isDown("ctrl") and key == "s" then
-		Emulator.actions.shutdown =  love.timer.getTime()
-	elseif Emulator.actions.reboot == nil   and love.keyboard.isDown("ctrl") and key == "r" then
-		Emulator.actions.reboot =    love.timer.getTime()
-	else -- Ignore key shortcuts before "press any key" action. TODO: This might be slightly buggy!
-		if not Emulator.running then
-			Emulator:start()
-			return
-		end
 	end
 
 	if love.keyboard.isDown("ctrl") and key == "v" then
@@ -282,19 +272,13 @@ function updateShortcut(name, key1, key2, cb)
 end
 
 function love.update(dt)
-	next_time = next_time + 0.05
+	if _conf.lockfps > 0 then next_time = next_time + min_dt end
 	local now = love.timer.getTime()
+	if murder:pop() ~= nil then crash() end
 	if _conf.enableAPI_http == true then HttpRequest.checkRequests() end
-	if Emulator.reboot then Emulator:start() end
 
 	updateShortcut("terminate", "ctrl", "t", function()
 			table.insert(Emulator.eventQueue, {"terminate"})
-		end)
-	updateShortcut("shutdown",  "ctrl", "s", function()
-			Emulator:stop()
-		end)
-	updateShortcut("reboot",    "ctrl", "r", function()
-			Emulator:stop( true )
 		end)
 	
 	if #Emulator.actions.timers > 0 then
@@ -350,7 +334,7 @@ function love.draw()
 		next_time = cur_time
 		return
 	end
-	--love.timer.sleep(next_time - cur_time)
+	love.timer.sleep(next_time - cur_time)
 end
 
 function love.run()
@@ -370,7 +354,8 @@ function love.run()
 		if downlink:getCount() > 0 then
 			for i = 1,downlink:getCount() do
 				local msg = downlink:pop()
-				if msg[1] == "mousereleased" then
+				if msg == nil then
+				elseif msg[1] == "mousereleased" then
 					love.mousereleased(msg[2],msg[3],msg[4])
 				elseif msg[1] == "mousepressed" then
 					love.mousepressed(msg[2],msg[3],msg[4])
