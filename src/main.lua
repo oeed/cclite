@@ -156,17 +156,10 @@ function love.load()
 	font:setFilter("nearest","nearest")
 	love.graphics.setFont(font)
 
-	local fontObj = love.filesystem.newFile("res/font.txt", "r")
-	local fontPack = ""
-	for line in fontObj:lines() do
-		if line:sub(1,1) ~= "#" then
-			fontPack = fontPack .. line
-		end
-	end
-	fontObj:close()
+	local fontPack = {32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,39,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,226,140,130,195,135,195,188,195,169,195,162,195,164,195,160,195,165,195,167,195,170,195,171,195,168,195,175,195,174,195,172,195,132,195,133,195,137,195,166,195,134,195,180,195,182,195,178,195,187,195,185,195,191,195,150,195,156,195,184,194,163,195,152,195,151,198,146,195,161,195,173,195,179,195,186,195,177,195,145,194,170,194,186,194,191,194,174,194,172,194,189,194,188,194,161,194,171,194,187}
 	ChatAllowedCharacters = {}
 	for i = 1,#fontPack do
-		ChatAllowedCharacters[fontPack:sub(i,i):byte()] = true
+		ChatAllowedCharacters[fontPack[i]] = true
 	end
 
 	if not love.filesystem.exists("data/") then
