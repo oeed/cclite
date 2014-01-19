@@ -26,8 +26,6 @@ Add in more error checking
 
 Add in virtual redstone system
 
-Finish mounting system.
-
 Make Error Levels report C functions properly
 
 Make peripheralAttach only add valid sides
@@ -35,6 +33,8 @@ Make peripheralAttach only add valid sides
 Have virtual Disk Drives work with Treasure disks
 
 Something in the HTTP libraries is trying to push numbers to TSerial
+
+Make virtual Disk Drives use mounting system
 
 **Add in missing globals:**
 

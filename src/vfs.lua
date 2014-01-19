@@ -4,7 +4,6 @@
 local mountTable = {}
 vfs = {}
 function vfs.normalize(path)
-	-- Borrowed from ComputerCraft
 	path = "/" .. path
 	local tPath = {}
 	for part in path:gmatch("[^/]+") do
@@ -18,7 +17,7 @@ function vfs.normalize(path)
 	end
 	return "/" .. table.concat(tPath, "/")
 end
-function vfs.fake2real(path)
+function vfs.getMountContainer(path)
 	path = vfs.normalize(path)
 	local base
 	for i = 1,#mountTable do
@@ -29,12 +28,17 @@ function vfs.fake2real(path)
 	if base == nil then
 		error("Please mount / first before using vfs",3)
 	end
-	return mountTable[base][1] .. (mountTable[base][2] == "/" and path or path:sub(#mountTable[base][2]+1))
+	return mountTable[base]
 end
-local quickPatch = {"append","createDirectory","isFile","lines","load","newFile","read","remove","write"}
+function vfs.fake2real(path)
+	path = vfs.normalize(path)
+	local mT = vfs.getMountContainer(path)
+	return mT[1] .. (mT[2] == "/" and path or path:sub(#mT[2]+1))
+end
+local quickPatch = {"append","createDirectory","isFile","lines","load","newFile","read","write"}
 for i = 1,#quickPatch do
 	vfs[quickPatch[i]] = function(path,...)
-		return love.filesystem[quickPatch[i]](vfs.fake2real(path),...) -- I don't think this works.
+		return love.filesystem[quickPatch[i]](vfs.fake2real(path),...)
 	end
 end
 local copyOver = {"getAppdataDirectory","getIdentity","getSaveDirectory","getUserDirectory","getWorkingDirectory","isFused","setIdentity","setSource"}
@@ -48,7 +52,7 @@ function vfs.exists(filename)
 			return true
 		end
 	end
-	return love.filesystem.isDirectory(vfs.fake2real(filename))
+	return love.filesystem.exists(vfs.fake2real(filename))
 end
 function vfs.getDirectoryItems(dir)
 	dir = vfs.normalize(dir)
@@ -98,13 +102,29 @@ function vfs.isDirectory(filename)
 end
 vfs.fsmount = love.filesystem.mount
 function vfs.mount(realPath,fakePath) -- Not the same as love.filesystem.mount
-	table.insert(mountTable,{vfs.normalize(realPath),vfs.normalize(fakePath),os.time()}) -- TODO: os.time() doesn't guarentee unix epoch time.
+	fakePath = vfs.normalize(fakePath)
+	for i = 1,#mountTable do
+		if mountTable[i][2] == fakePath then
+			return false
+		end
+	end
+	table.insert(mountTable,{vfs.normalize(realPath),fakePath,os.time()}) -- TODO: os.time() doesn't guarentee unix epoch time.
+	return true
 end
 function vfs.newFileData(contents,name,decoder)
 	if name == nil and decoder == nil then
 		return love.filesystem.newFileData(contents,name,decoder)
 	end
 	return love.filesystem.newFileData(vfs.fake2real(contents))
+end
+function vfs.remove(filename)
+	filename = vfs.normalize(filename)
+	for i = 1,#mountTable do
+		if mountTable[i][2] == filename then
+			return false
+		end
+	end
+	return love.filesystem.remove(vfs.fake2real(filename))
 end
 vfs.fsunmount = love.filesystem.unmount
 function vfs.unmount(fakePath) -- Not the same as love.filesystem.unmount

@@ -55,8 +55,8 @@ end
 
 local function FileReadHandle(path)
 	local contents = {}
-	for line in love.filesystem.lines(path) do
-	  table.insert(contents, line)
+	for line in vfs.lines(path) do
+		table.insert(contents, line)
 	end
 	local closed = false
 	local lineIndex = 1
@@ -92,7 +92,7 @@ end
 
 local function FileBinaryReadHandle(path)
 	local closed = false
-	local File = love.filesystem.newFile(path, "r")
+	local File = vfs.newFile(path, "r")
 	if File == nil then return end
 	local handle = {
 		close = function()
@@ -109,7 +109,7 @@ end
 
 local function FileWriteHandle(path, append)
 	local closed = false
-	local File = love.filesystem.newFile(path, append and "a" or "w")
+	local File = vfs.newFile(path, append and "a" or "w")
 	if File == nil then return end
 	local handle = {
 		close = function()
@@ -129,7 +129,7 @@ local function FileWriteHandle(path, append)
 				File:flush()
 			else
 				File:close()
-				File = love.filesystem.newFile(path, "a")
+				File = vfs.newFile(path, "a")
 			end
 		end
 	}
@@ -138,7 +138,7 @@ end
 
 local function FileBinaryWriteHandle(path, append)
 	local closed = false
-	local File = love.filesystem.newFile(path, append and "a" or "w")
+	local File = vfs.newFile(path, append and "a" or "w")
 	if File == nil then return end
 	local handle = {
 		close = function()
@@ -155,7 +155,7 @@ local function FileBinaryWriteHandle(path, append)
 				File:flush()
 			else
 				File:close()
-				File = love.filesystem.newFile(path, "a")
+				File = vfs.newFile(path, "a")
 			end
 		end
 	}
@@ -540,29 +540,15 @@ function api.fs.open(path, mode)
 	end
 	local testpath = api.fs.combine("data/", path)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
-	path = api.fs.combine("", path)
+	path = vfs.normalize(path)
 	if mode == "r" then
-		local sPath
-		if love.filesystem.exists("data/" .. path) then
-			sPath = "data/" .. path
-		elseif love.filesystem.exists("lua/" .. path) then
-			sPath = "lua/" .. path
-		end
-		if sPath == nil or sPath == "lua/bios.lua" then return end
-		return FileReadHandle(sPath)
+		return FileReadHandle(path)
 	elseif mode == "rb" then
-		local sPath
-		if love.filesystem.exists("data/" .. path) then
-			sPath = "data/" .. path
-		elseif love.filesystem.exists("lua/" .. path) then
-			sPath = "lua/" .. path
-		end
-		if sPath == nil or sPath == "lua/bios.lua" then return end
-		return FileBinaryReadHandle(sPath)
+		return FileBinaryReadHandle(path)
 	elseif mode == "w" or mode == "a" then
-		return FileWriteHandle("data/" .. path,mode == "a")
+		return FileWriteHandle(path,mode == "a")
 	elseif mode == "wb" or mode == "ab" then
-		return FileBinaryWriteHandle("data/" .. path,mode == "ab")
+		return FileBinaryWriteHandle(path,mode == "ab")
 	else
 		error("Unsupported mode",2)
 	end
@@ -573,17 +559,8 @@ function api.fs.list(path)
 	end
 	local testpath = api.fs.combine("data/", path)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
-	path = api.fs.combine("", path)
-	local res = {}
-	if love.filesystem.exists("data/" .. path) then -- This path takes precedence
-		res = love.filesystem.getDirectoryItems("data/" .. path)
-	end
-	if love.filesystem.exists("lua/" .. path) then
-		for k, v in pairs(love.filesystem.getDirectoryItems("lua/" .. path)) do
-			if v ~= "bios.lua" then table.insert(res, v) end
-		end
-	end
-	return res
+	path = vfs.normalize(path)
+	return vfs.getDirectoryItems(path)
 end
 function api.fs.exists(path)
 	if type(path) ~= "string" then
@@ -591,9 +568,8 @@ function api.fs.exists(path)
 	end
 	local testpath = api.fs.combine("data/", path)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then return false end
-	path = api.fs.combine("", path)
-	if path == "bios.lua" then return false end
-	return love.filesystem.exists("data/" .. path) or love.filesystem.exists("lua/" .. path)
+	path = vfs.normalize(path)
+	return vfs.exists(path)
 end
 function api.fs.isDir(path)
 	if type(path) ~= "string" then
@@ -601,15 +577,15 @@ function api.fs.isDir(path)
 	end
 	local testpath = api.fs.combine("data/", path)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then return false end
-	path = api.fs.combine("", path)
-	return love.filesystem.isDirectory("data/" .. path) or love.filesystem.isDirectory("lua/" .. path)
+	path = vfs.normalize(path)
+	return vfs.isDirectory(path)
 end
 function api.fs.isReadOnly(path)
 	if type(path) ~= "string" then
 		error("Expected string",2)
 	end
-	path = api.fs.combine("", path)
-	return path == "rom" or string.sub(path, 1, 4) == "rom/"
+	path = vfs.normalize(path)
+	return path == "/rom" or string.sub(path, 1, 5) == "/rom/"
 end
 function api.fs.getName(path)
 	if type(path) ~= "string" then
@@ -624,23 +600,16 @@ function api.fs.getSize(path)
 	end
 	local testpath = api.fs.combine("data/", path)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
-	path = api.fs.combine("", path)
-	if api.fs.exists(path) ~= true then
+	path = vfs.normalize(path)
+	if vfs.exists(path) ~= true then
 		error("No such file",2)
 	end
-	
-	local sPath = nil
-	if love.filesystem.exists("data/" .. path) then
-		sPath = "data/" .. path
-	elseif love.filesystem.exists("lua/" .. path) then
-		sPath = "lua/" .. path
-	end
 
-	if love.filesystem.isDirectory(sPath) then
+	if vfs.isDirectory(path) then
 		return 512
 	end
 	
-	local size = love.filesystem.getSize(sPath)
+	local size = vfs.getSize(path)
 	if size == 0 then size = 512 end
 	return math.ceil(size/512)*512
 end
@@ -655,47 +624,47 @@ function api.fs.makeDir(path) -- All write functions are within data/
 	end
 	local testpath = api.fs.combine("data/", path)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
-	path = api.fs.combine("", path)
-	if path == "rom" or string.sub(path, 1, 4) == "rom/" then
+	path = vfs.normalize(path)
+	if path == "/rom" or string.sub(path, 1, 5) == "/rom/" then
 		error("Access Denied",2)
 	end
-	return love.filesystem.createDirectory("data/" .. path)
+	return vfs.createDirectory(path)
 end
 
 local function deltree(sFolder)
-	local tObjects = love.filesystem.getDirectoryItems(sFolder)
+	local tObjects = vfs.getDirectoryItems(sFolder)
 
 	if tObjects then
    		for _, sObject in pairs(tObjects) do
 	   		local pObject =  sFolder.."/"..sObject
 
-			if love.filesystem.isDirectory(pObject) then
+			if vfs.isDirectory(pObject) then
 				deltree(pObject)
 			end
-			love.filesystem.remove(pObject)
+			vfs.remove(pObject)
 		end
 	end
-	return love.filesystem.remove(sFolder)
+	return vfs.remove(sFolder)
 end
 
 local function copytree(sFolder, sToFolder)
-	if not love.filesystem.isDirectory(sFolder) then
-		love.filesystem.write(sToFolder, love.filesystem.read(sFolder))
+	if not vfs.isDirectory(sFolder) then
+		vfs.write(sToFolder, vfs.read(sFolder))
 		return
 	end
-	love.filesystem.createDirectory(sToFolder)
-	local tObjects = love.filesystem.getDirectoryItems(sFolder)
+	vfs.createDirectory(sToFolder)
+	local tObjects = vfs.getDirectoryItems(sFolder)
 
 	if tObjects then
    		for _, sObject in pairs(tObjects) do
 	   		local pObject =  sFolder.."/"..sObject
 			local pToObject = sToFolder.."/"..sObject
 
-			if love.filesystem.isDirectory(pObject) then
-				love.filesystem.createDirectory(pToObject)
+			if vfs.isDirectory(pObject) then
+				vfs.createDirectory(pToObject)
 				copytree(pObject,pToObject)
 			else
-				love.filesystem.write(pToObject, love.filesystem.read(pObject))
+				vfs.write(pToObject, vfs.read(pObject))
 			end
 		end
 	end
@@ -709,20 +678,20 @@ function api.fs.move(fromPath, toPath)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	local testpath = api.fs.combine("data/", toPath)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
-	fromPath = api.fs.combine("", fromPath)
-	toPath = api.fs.combine("", toPath)
-	if api.fs.exists(fromPath) ~= true then
+	fromPath = vfs.normalize(fromPath)
+	toPath = vfs.normalize(toPath)
+	if vfs.exists(fromPath) ~= true then
 		error("No such file",2)
 	end
-	if api.fs.exists(toPath) == true then
+	if vfs.exists(toPath) == true then
 		error("File exists",2)
 	end
-	if fromPath == "rom" or string.sub(fromPath, 1, 4) == "rom/" or 
-		toPath == "rom" or string.sub(toPath, 1, 4) == "rom/" then
+	if fromPath == "/rom" or string.sub(fromPath, 1, 5) == "/rom/" or 
+		toPath == "/rom" or string.sub(toPath, 1, 5) == "/rom/" then
 		error("Access Deined",2)
 	end
-	copytree("data/" .. fromPath, "data/" .. toPath)
-	deltree("data/" .. fromPath)
+	copytree(fromPath, toPath)
+	deltree(fromPath)
 end
 
 function api.fs.copy(fromPath, toPath)
@@ -733,35 +702,29 @@ function api.fs.copy(fromPath, toPath)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	local testpath = api.fs.combine("data/", toPath)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
-	fromPath = api.fs.combine("", fromPath)
-	toPath = api.fs.combine("", toPath)
-	if api.fs.exists(fromPath) ~= true then
+	fromPath = vfs.normalize(fromPath)
+	toPath = vfs.normalize(toPath)
+	if vfs.exists(fromPath) ~= true then
 		error("No such file",2)
 	end
-	if api.fs.exists(toPath) == true then
+	if vfs.exists(toPath) == true then
 		error("File exists",2)
 	end
-	if toPath == "rom" or string.sub(toPath, 1, 4) == "rom/" then
+	if toPath == "/rom" or string.sub(toPath, 1, 5) == "/rom/" then
 		error("Access Deined",2)
 	end
-	local sPath = nil
-	if love.filesystem.exists("data/" .. fromPath) then
-		sPath = "data/" .. fromPath
-	elseif love.filesystem.exists("lua/" .. fromPath) then
-		sPath = "lua/" .. fromPath
-	end
-	copytree(sPath, "data/" .. toPath)
+	copytree(fromPath, toPath)
 end
 
 function api.fs.delete(path)
 	if type(path) ~= "string" then error("Expected string",2) end
 	local testpath = api.fs.combine("data/", path)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
-	path = api.fs.combine("", path)
-	if path == "rom" or string.sub(path, 1, 4) == "rom/" then
+	path = vfs.normalize(path)
+	if path == "/rom" or string.sub(path, 1, 5) == "/rom/" then
 		error("Access Deined",2)
 	end
-	deltree("data/" .. path)
+	deltree(path)
 end
 
 api.bit = {}

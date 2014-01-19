@@ -2,6 +2,7 @@ if _conf.enableAPI_http == true then require("http.HttpRequest") end
 bit = require("bit")
 require("render")
 require("api")
+require("vfs")
 
 -- Load virtual peripherals.
 peripheral = {}
@@ -146,6 +147,9 @@ function love.load()
 	end
 
 	love.filesystem.setIdentity("ccemu")
+	
+	vfs.mount("/data","/")
+	vfs.mount("/lua/rom","/rom")
 	
 	local glyphs = ""
 	for i = 32,126 do
