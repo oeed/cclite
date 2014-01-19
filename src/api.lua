@@ -101,7 +101,7 @@ local function FileBinaryReadHandle(path)
 		end,
 		read = function()
 			if closed or File:eof() then return end
-			return string.byte(File:read(1))
+			return File:read(1):byte()
 		end
 	}
 	return handle
@@ -280,7 +280,7 @@ function api.term.write(text)
 		or api.comp.cursorY < 1 then return end
 
 	for i = 1, #text do
-		local char = string.sub(text, i, i)
+		local char = text:sub(i, i)
 		if api.comp.cursorX + i - 1 <= Screen.width
 			and api.comp.cursorX + i - 1 >= 1 then
 			Screen.textB[api.comp.cursorY][api.comp.cursorX + i - 1] = char
@@ -414,7 +414,7 @@ if _conf.enableAPI_http == true then
 
 		if method == "POST" then
 			http.setRequestHeader("Content-Type", "application/x-www-form-urlencoded")
-			http.setRequestHeader("Content-Length", string.len(sParams))
+			http.setRequestHeader("Content-Length", sParams:len())
 		end
 
 		http.onReadyStateChange = function()
@@ -585,13 +585,13 @@ function api.fs.isReadOnly(path)
 		error("Expected string",2)
 	end
 	path = vfs.normalize(path)
-	return path == "/rom" or string.sub(path, 1, 5) == "/rom/"
+	return path == "/rom" or path:sub(1, 5) == "/rom/" or vfs.isMountPath(path)
 end
 function api.fs.getName(path)
 	if type(path) ~= "string" then
 		error("Expected string",2)
 	end
-	local fpath, name, ext = string.match(path, "(.-)([^\\/]-%.?([^%.\\/]*))$")
+	local fpath, name, ext = path:match("(.-)([^\\/]-%.?([^%.\\/]*))$")
 	return name
 end
 function api.fs.getSize(path)
@@ -625,7 +625,7 @@ function api.fs.makeDir(path) -- All write functions are within data/
 	local testpath = api.fs.combine("data/", path)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	path = vfs.normalize(path)
-	if path == "/rom" or string.sub(path, 1, 5) == "/rom/" then
+	if path == "/rom" or path:sub(1, 5) == "/rom/" then
 		error("Access Denied",2)
 	end
 	return vfs.createDirectory(path)
@@ -686,8 +686,8 @@ function api.fs.move(fromPath, toPath)
 	if vfs.exists(toPath) == true then
 		error("File exists",2)
 	end
-	if fromPath == "/rom" or string.sub(fromPath, 1, 5) == "/rom/" or 
-		toPath == "/rom" or string.sub(toPath, 1, 5) == "/rom/" then
+	if fromPath == "/rom" or fromPath:sub(1, 5) == "/rom/" or 
+		toPath == "/rom" or toPath:sub(1, 5) == "/rom/" then
 		error("Access Deined",2)
 	end
 	copytree(fromPath, toPath)
@@ -710,7 +710,7 @@ function api.fs.copy(fromPath, toPath)
 	if vfs.exists(toPath) == true then
 		error("File exists",2)
 	end
-	if toPath == "/rom" or string.sub(toPath, 1, 5) == "/rom/" then
+	if toPath == "/rom" or toPath:sub(1, 5) == "/rom/" then
 		error("Access Deined",2)
 	end
 	copytree(fromPath, toPath)
@@ -721,7 +721,7 @@ function api.fs.delete(path)
 	local testpath = api.fs.combine("data/", path)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	path = vfs.normalize(path)
-	if path == "/rom" or string.sub(path, 1, 5) == "/rom/" then
+	if path == "/rom" or path:sub(1, 5) == "/rom/" then
 		error("Access Deined",2)
 	end
 	deltree(path)

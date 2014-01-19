@@ -35,6 +35,15 @@ function vfs.fake2real(path)
 	local mT = vfs.getMountContainer(path)
 	return mT[1] .. (mT[2] == "/" and path or path:sub(#mT[2]+1))
 end
+function vfs.isMountPath(path)
+	path = vfs.normalize(path)
+	for i = 1,#mountTable do
+		if mountTable[i][2] == path then
+			return true
+		end
+	end
+	return false
+end
 local quickPatch = {"append","createDirectory","isFile","lines","load","newFile","read","write"}
 for i = 1,#quickPatch do
 	vfs[quickPatch[i]] = function(path,...)
@@ -46,13 +55,7 @@ for i = 1,#copyOver do
 	vfs[copyOver[i]] = love.filesystem[copyOver[i]]
 end
 function vfs.exists(filename)
-	filename = vfs.normalize(filename)
-	for i = 1,#mountTable do
-		if mountTable[i][2] == filename then
-			return true
-		end
-	end
-	return love.filesystem.exists(vfs.fake2real(filename))
+	return vfs.isMountPath(filename) or love.filesystem.exists(vfs.fake2real(filename))
 end
 function vfs.getDirectoryItems(dir)
 	dir = vfs.normalize(dir)
@@ -92,21 +95,12 @@ function vfs.getSize(filename)
 end
 vfs.init = function() end -- love.filesystem.init -- Don't call this, EVER
 function vfs.isDirectory(filename)
-	filename = vfs.normalize(filename)
-	for i = 1,#mountTable do
-		if mountTable[i][2] == filename then
-			return true
-		end
-	end
-	return love.filesystem.isDirectory(vfs.fake2real(filename))
+	return vfs.isMountPath(filename) or love.filesystem.isDirectory(vfs.fake2real(filename))
 end
 vfs.fsmount = love.filesystem.mount
 function vfs.mount(realPath,fakePath) -- Not the same as love.filesystem.mount
-	fakePath = vfs.normalize(fakePath)
-	for i = 1,#mountTable do
-		if mountTable[i][2] == fakePath then
-			return false
-		end
+	if vfs.isMountPath(fakePath) then
+		return false
 	end
 	table.insert(mountTable,{vfs.normalize(realPath),fakePath,os.time()}) -- TODO: os.time() doesn't guarentee unix epoch time.
 	return true
@@ -118,11 +112,8 @@ function vfs.newFileData(contents,name,decoder)
 	return love.filesystem.newFileData(vfs.fake2real(contents))
 end
 function vfs.remove(filename)
-	filename = vfs.normalize(filename)
-	for i = 1,#mountTable do
-		if mountTable[i][2] == filename then
-			return false
-		end
+	if vfs.isMountPath(filename) then
+		return false
 	end
 	return love.filesystem.remove(vfs.fake2real(filename))
 end
