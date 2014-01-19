@@ -1,4 +1,4 @@
-require('render')
+require("render")
 
 demand = love.thread.getChannel("demand")
 downlink = love.thread.getChannel("downlink")
@@ -43,9 +43,9 @@ function api.term.setCursorPos(x, y)
 	api.comp.cursorY = math.floor(y)
 	Screen.dirty = true
 end
-function api.term.write( text )
+function api.term.write(text)
 	for i = 1, #text do
-		local char = string.sub( text, i, i )
+		local char = string.sub(text, i, i)
 		if api.comp.cursorX + i - 1 <= Screen.width
 			and api.comp.cursorX + i - 1 >= 1 then
 			Screen.textB[api.comp.cursorY][api.comp.cursorX + i - 1] = char
@@ -56,23 +56,23 @@ function api.term.write( text )
 	api.comp.cursorX = api.comp.cursorX + #text
 	Screen.dirty = true
 end
-function api.term.setTextColor( num )
+function api.term.setTextColor(num)
 	num = 2^math.floor(math.log(num)/math.log(2))
 	api.comp.fg = num
 	Screen.dirty = true
 end
-function api.term.setBackgroundColor( num )
+function api.term.setBackgroundColor(num)
 	num = 2^math.floor(math.log(num)/math.log(2))
 	api.comp.bg = num
 end
 function api.term.isColor()
 	return true
 end
-function api.term.setCursorBlink( bool )
+function api.term.setCursorBlink(bool)
 	api.comp.blink = bool
 	Screen.dirty = true
 end
-function api.term.scroll( n )
+function api.term.scroll(n)
 	local textBuffer = {}
 	local backgroundColourBuffer = {}
 	local textColourBuffer = {}
@@ -108,7 +108,7 @@ end
 
 -- Patch love.keyboard.isDown to make ctrl checking easier
 local olkiD = love.keyboard.isDown
-function love.keyboard.isDown( ... )
+function love.keyboard.isDown(...)
 	local keys = { ... }
 	if #keys == 1 and keys[1] == "ctrl" then
 		return olkiD("lctrl") or olkiD("rctrl")
@@ -139,7 +139,7 @@ function Emulator:start()
 	demand:push(_conf)
 end
 
-function Emulator:stop( reboot )
+function Emulator:stop(reboot)
 	murder:push(reboot)
 	self.reboot = reboot
 	self.running = false
@@ -192,7 +192,7 @@ function love.load()
 	font:setFilter("nearest","nearest")
 	love.graphics.setFont(font)
 	
-	love.keyboard.setKeyRepeat( true )
+	love.keyboard.setKeyRepeat(true)
 	
 	Emulator:start()
 	
@@ -278,10 +278,10 @@ function love.update()
 		end
 	end
 	updateShortcut("shutdown",  "ctrl", "s", function()
-			Emulator:stop( false )
+			Emulator:stop(false)
 		end)
 	updateShortcut("reboot",    "ctrl", "r", function()
-			Emulator:stop( true )
+			Emulator:stop(true)
 		end)
 	if Emulator.reboot then Emulator:start() end
 	if _conf.cclite_showFPS then

@@ -9,9 +9,10 @@ require("love.timer")
 require("love.mouse")
 require("love.system")
 --require("love.keyboard")
-require('api')
+if _conf.enableAPI_http == true then require("http.HttpRequest") end
 bit = require("bit")
-if _conf.enableAPI_http == true then require('http.HttpRequest') end
+require("api")
+require("vfs")
 
 downlink = love.thread.getChannel("downlink")
 uplink = love.thread.getChannel("uplink")
@@ -115,7 +116,7 @@ function Emulator:start()
 	api.init()
 	uplink:push({"initScreen"})
 
-	local fn, err = love.filesystem.load('lua/bios.lua') -- lua/bios.lua
+	local fn, err = api.loadstring(love.filesystem.read("lua/bios.lua"),"bios")
 	local tEnv = {}
 
 	if not fn then
@@ -168,18 +169,18 @@ function love.load()
 		next_time = love.timer.getTime()
 	end
 
-	local fontObj = love.filesystem.newFile("res/font.txt", "r")
-	local fontPack = ""
-	for line in fontObj:lines() do
-		if line:sub(1,1) ~= "#" then
-			fontPack = fontPack .. line
-		end
-	end
-	fontObj:close()
+	vfs.mount("/data","/")
+	vfs.mount("/lua/rom","/rom")
+	
+	local fontPack = {131,161,163,166,170,171,172,174,186,187,188,189,191,196,197,198,199,201,209,214,215,216,220,224,225,226,228,229,230,231,232,233,234,235,236,237,238,239,241,242,243,244,246,248,249,250,251,252,255}
 	ChatAllowedCharacters = {}
-	for i = 1,#fontPack do
-		ChatAllowedCharacters[fontPack:sub(i,i):byte()] = true
+	for i = 32,126 do
+		ChatAllowedCharacters[i] = true
 	end
+	for i = 1,#fontPack do
+		ChatAllowedCharacters[fontPack[i]] = true
+	end
+	ChatAllowedCharacters[96] = nil
 	
 	if not love.filesystem.exists("data/") then
 		love.filesystem.createDirectory("data/") -- Make the user data folder
