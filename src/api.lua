@@ -53,7 +53,7 @@ if _conf.enableAPI_http == true then
 	end
 end
 
-local function FileReadHandle( path )
+local function FileReadHandle(path)
 	local contents = {}
 	for line in love.filesystem.lines(path) do
 	  table.insert(contents, line)
@@ -90,9 +90,9 @@ local function FileReadHandle( path )
 	return handle
 end
 
-local function FileBinaryReadHandle( path )
+local function FileBinaryReadHandle(path)
 	local closed = false
-	local File = love.filesystem.newFile( path, "r" )
+	local File = love.filesystem.newFile(path, "r")
 	if File == nil then return end
 	local handle = {
 		close = function()
@@ -107,20 +107,20 @@ local function FileBinaryReadHandle( path )
 	return handle
 end
 
-local function FileWriteHandle( path, append )
+local function FileWriteHandle(path, append)
 	local closed = false
-	local File = love.filesystem.newFile( path, append and "a" or "w" )
+	local File = love.filesystem.newFile(path, append and "a" or "w")
 	if File == nil then return end
 	local handle = {
 		close = function()
 			closed = true
 			File:close()
 		end,
-		writeLine = function( data )
+		writeLine = function(data)
 			if closed then error("Stream closed",2) end
 			File:write(data .. (_conf.useCRLF == true and "\r\n" or "\n"))
 		end,
-		write = function ( data )
+		write = function(data)
 			if closed then error("Stream closed",2) end
 			File:write(data)
 		end,
@@ -129,23 +129,23 @@ local function FileWriteHandle( path, append )
 				File:flush()
 			else
 				File:close()
-				File = love.filesystem.newFile( path, "a" )
+				File = love.filesystem.newFile(path, "a")
 			end
 		end
 	}
 	return handle
 end
 
-local function FileBinaryWriteHandle( path, append )
+local function FileBinaryWriteHandle(path, append)
 	local closed = false
-	local File = love.filesystem.newFile( path, append and "a" or "w" )
+	local File = love.filesystem.newFile(path, append and "a" or "w")
 	if File == nil then return end
 	local handle = {
 		close = function()
 			closed = true
 			File:close()
 		end,
-		write = function ( data )
+		write = function(data)
 			if closed then return end
 			if type(data) ~= "number" then return end
 			File:write(string.char(math.max(math.min(data,255),0)))
@@ -155,7 +155,7 @@ local function FileBinaryWriteHandle( path, append )
 				File:flush()
 			else
 				File:close()
-				File = love.filesystem.newFile( path, "a" )
+				File = love.filesystem.newFile(path, "a")
 			end
 		end
 	}
@@ -164,7 +164,7 @@ end
 
 -- Needed for term.write
 -- This serialzier is bad, it is supposed to be bad. Don't use it.
-local function serializeImpl( t, tTracking )	
+local function serializeImpl(t, tTracking)	
 	local sType = type(t)
 	if sType == "table" then
 		if tTracking[t] ~= nil then
@@ -200,9 +200,9 @@ local function serializeImpl( t, tTracking )
 	end
 end
 
-local function serialize( t )
+local function serialize(t)
 	local tTracking = {}
-	return serializeImpl( t, tTracking ) or ""
+	return serializeImpl(t, tTracking) or ""
 end
 
 api = {}
@@ -274,13 +274,13 @@ function api.term.setCursorPos(x, y)
 	api.comp.cursorY = math.floor(y)
 	Screen.dirty = true
 end
-function api.term.write( text )
+function api.term.write(text)
 	text = serialize(text)
 	if api.comp.cursorY > Screen.height
 		or api.comp.cursorY < 1 then return end
 
 	for i = 1, #text do
-		local char = string.sub( text, i, i )
+		local char = string.sub(text, i, i)
 		if api.comp.cursorX + i - 1 <= Screen.width
 			and api.comp.cursorX + i - 1 >= 1 then
 			Screen.textB[api.comp.cursorY][api.comp.cursorX + i - 1] = char
@@ -291,7 +291,7 @@ function api.term.write( text )
 	api.comp.cursorX = api.comp.cursorX + #text
 	Screen.dirty = true
 end
-function api.term.setTextColor( num )
+function api.term.setTextColor(num)
 	if type(num) ~= "number" then error("Expected number",2) end
 	if num < 1 or num >= 65536 then
 		error("Colour out of range",2)
@@ -300,7 +300,7 @@ function api.term.setTextColor( num )
 	api.comp.fg = num
 	Screen.dirty = true
 end
-function api.term.setBackgroundColor( num )
+function api.term.setBackgroundColor(num)
 	if type(num) ~= "number" then error("Expected number",2) end
 	if num < 1 or num >= 65536 then
 		error("Colour out of range",2)
@@ -311,12 +311,12 @@ end
 function api.term.isColor()
 	return true
 end
-function api.term.setCursorBlink( bool )
+function api.term.setCursorBlink(bool)
 	if type(bool) ~= "boolean" then error("Expected boolean",2) end
 	api.comp.blink = bool
 	Screen.dirty = true
 end
-function api.term.scroll( n )
+function api.term.scroll(n)
 	if type(n) ~= "number" then error("Expected number",2) end
 	local textBuffer = {}
 	local backgroundColourBuffer = {}
@@ -368,7 +368,7 @@ end
 api.cclite = {}
 api.cclite.peripherals = {}
 if _conf.enableAPI_cclite == true then
-	function api.cclite.peripheralAttach( sSide, sType )
+	function api.cclite.peripheralAttach(sSide, sType)
 		if type(sSide) ~= "string" or type(sType) ~= "string" then
 			error("Expected string, string",2)
 		end
@@ -385,7 +385,7 @@ if _conf.enableAPI_cclite == true then
 			error("No peripheral added",2)
 		end
 	end
-	function api.cclite.peripheralDetach( sSide )
+	function api.cclite.peripheralDetach(sSide)
 		if type(sSide) ~= "string" then error("Expected string",2) end
 		if not api.cclite.peripherals[sSide] then
 			error("No peripheral attached to " .. sSide,2)
@@ -393,7 +393,7 @@ if _conf.enableAPI_cclite == true then
 		api.cclite.peripherals[sSide] = nil
 		table.insert(Emulator.eventQueue, {"peripheral_detach",sSide})
 	end
-	function api.cclite.call( sSide, sMethod, ... )
+	function api.cclite.call(sSide, sMethod, ...)
 		if type(sSide) ~= "string" then error("Expected string",2) end
 		if type(sMethod) ~= "string" then error("Expected string, string",2) end
 		if not api.cclite.peripherals[sSide] then error("No peripheral attached",2) end
@@ -403,7 +403,7 @@ end
 
 if _conf.enableAPI_http == true then
 	api.http = {}
-	function api.http.request( sUrl, sParams )
+	function api.http.request(sUrl, sParams)
 		if type(sUrl) ~= "string" then
 			error("String expected" .. (sUrl == nil and ", got nil" or ""),2)
 		end
@@ -447,12 +447,12 @@ end
 function api.os.getComputerLabel()
 	return api.comp.label
 end
-function api.os.queueEvent( ... )
+function api.os.queueEvent(...)
 	local event = { ... }
 	if type(event[1]) ~= "string" then error("Expected string",2) end
 	table.insert(Emulator.eventQueue, event)
 end
-function api.os.startTimer( nTimeout )
+function api.os.startTimer(nTimeout)
 	if type(nTimeout) ~= "number" then error("Expected number",2) end
 	nTimeout = math.ceil(nTimeout*20)/20
 	if nTimeout < 0.05 then nTimeout = 0.05 end
@@ -465,10 +465,10 @@ function api.os.startTimer( nTimeout )
 	end
 	return nil -- Error
 end
-function api.os.setAlarm( nTime )
+function api.os.setAlarm(nTime)
 	if type(nTime) ~= "number" then error("Expected number",2) end
 	if nTime < 0 or nTime > 24 then
-		error( "Number out of range: " .. tostring( nTime ) )
+		error("Number out of range: " .. tostring(nTime))
 	end
 	local alarm = {
 		time = nTime,
@@ -483,25 +483,25 @@ function api.os.shutdown()
 	Emulator:stop()
 end
 function api.os.reboot()
-	Emulator:stop( true ) -- Reboots on next update/tick
+	Emulator:stop(true) -- Reboots on next update/tick
 end
 
 api.peripheral = {}
-function api.peripheral.isPresent( sSide )
+function api.peripheral.isPresent(sSide)
 	if type(sSide) ~= "string" then error("Expected string",2) end
 	return api.cclite.peripherals[sSide] ~= nil
 end
-function api.peripheral.getType( sSide )
+function api.peripheral.getType(sSide)
 	if type(sSide) ~= "string" then error("Expected string",2) end
 	if api.cclite.peripherals[sSide] then return api.cclite.peripherals[sSide].getType() end
 	return
 end
-function api.peripheral.getMethods( sSide )
+function api.peripheral.getMethods(sSide)
 	if type(sSide) ~= "string" then error("Expected string",2) end
 	if api.cclite.peripherals[sSide] then return api.cclite.peripherals[sSide].getMethods() end
 	return
 end
-function api.peripheral.call( sSide, sMethod, ... )
+function api.peripheral.call(sSide, sMethod, ...)
 	if type(sSide) ~= "string" then error("Expected string",2) end
 	if type(sMethod) ~= "string" then error("Expected string, string",2) end
 	if not api.cclite.peripherals[sSide] then error("No peripheral attached",2) end
@@ -549,7 +549,7 @@ function api.fs.open(path, mode)
 			sPath = "lua/" .. path
 		end
 		if sPath == nil or sPath == "lua/bios.lua" then return end
-		return FileReadHandle( sPath )
+		return FileReadHandle(sPath)
 	elseif mode == "rb" then
 		local sPath
 		if love.filesystem.exists("data/" .. path) then
@@ -558,7 +558,7 @@ function api.fs.open(path, mode)
 			sPath = "lua/" .. path
 		end
 		if sPath == nil or sPath == "lua/bios.lua" then return end
-		return FileBinaryReadHandle( sPath )
+		return FileBinaryReadHandle(sPath)
 	elseif mode == "w" or mode == "a" then
 		return FileWriteHandle("data/" .. path,mode == "a")
 	elseif mode == "wb" or mode == "ab" then
@@ -636,7 +636,7 @@ function api.fs.getSize(path)
 		sPath = "lua/" .. path
 	end
 
-	if love.filesystem.isDirectory( sPath ) then
+	if love.filesystem.isDirectory(sPath) then
 		return 512
 	end
 	
@@ -659,7 +659,7 @@ function api.fs.makeDir(path) -- All write functions are within data/
 	if path == "rom" or string.sub(path, 1, 4) == "rom/" then
 		error("Access Denied",2)
 	end
-	return love.filesystem.createDirectory( "data/" .. path )
+	return love.filesystem.createDirectory("data/" .. path)
 end
 
 local function deltree(sFolder)
@@ -680,7 +680,7 @@ end
 
 local function copytree(sFolder, sToFolder)
 	if not love.filesystem.isDirectory(sFolder) then
-		love.filesystem.write(sToFolder, love.filesystem.read( sFolder ))
+		love.filesystem.write(sToFolder, love.filesystem.read(sFolder))
 		return
 	end
 	love.filesystem.createDirectory(sToFolder)
@@ -695,7 +695,7 @@ local function copytree(sFolder, sToFolder)
 				love.filesystem.createDirectory(pToObject)
 				copytree(pObject,pToObject)
 			else
-				love.filesystem.write(pToObject, love.filesystem.read( pObject ))
+				love.filesystem.write(pToObject, love.filesystem.read(pObject))
 			end
 		end
 	end
@@ -722,7 +722,7 @@ function api.fs.move(fromPath, toPath)
 		error("Access Deined",2)
 	end
 	copytree("data/" .. fromPath, "data/" .. toPath)
-	deltree( "data/" .. fromPath )
+	deltree("data/" .. fromPath)
 end
 
 function api.fs.copy(fromPath, toPath)
@@ -761,7 +761,7 @@ function api.fs.delete(path)
 	if path == "rom" or string.sub(path, 1, 4) == "rom/" then
 		error("Access Deined",2)
 	end
-	deltree( "data/" .. path )
+	deltree("data/" .. path)
 end
 
 api.bit = {}
@@ -769,25 +769,25 @@ function api.bit.norm(val)
 	while val < 0 do val = val + 4294967296 end
 	return val
 end
-function api.bit.blshift( n, bits )
+function api.bit.blshift(n, bits)
 	return api.bit.norm(bit.lshift(n, bits))
 end
-function api.bit.brshift( n, bits )
+function api.bit.brshift(n, bits)
 	return api.bit.norm(bit.arshift(n, bits))
 end
-function api.bit.blogic_rshift( n, bits )
+function api.bit.blogic_rshift(n, bits)
 	return api.bit.norm(bit.rshift(n, bits))
 end
-function api.bit.bxor( m, n )
+function api.bit.bxor(m, n)
 	return api.bit.norm(bit.bxor(m, n))
 end
-function api.bit.bor( m, n )
+function api.bit.bor(m, n)
 	return api.bit.norm(bit.bor(m, n))
 end
-function api.bit.band( m, n )
+function api.bit.band(m, n)
 	return api.bit.norm(bit.band(m, n))
 end
-function api.bit.bnot( n )
+function api.bit.bnot(n)
 	return api.bit.norm(bit.bnot(n))
 end
 
