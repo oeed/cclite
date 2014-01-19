@@ -51,8 +51,25 @@ function vfs.exists(filename)
 	return love.filesystem.isDirectory(vfs.fake2real(filename))
 end
 function vfs.getDirectoryItems(dir)
+	dir = vfs.normalize(dir)
 	local result = love.filesystem.getDirectoryItems(vfs.fake2real(dir))
-	-- TODO: Inject mount points into results
+	-- TODO: Is there any better way to do this?
+	if dir == "/" then
+		for i = 1,#mountTable do
+			local _,count = mountTable[i][2]:gsub("/","")
+			if count == 1 and mountTable[i][2] ~= "/" then
+				table.insert(result,mountTable[i][2]:sub(2))
+			end
+		end
+	else
+		local _,scount = dir:gsub("/","")
+		for i = 1,#mountTable do
+			local _,count = mountTable[i][2]:gsub("/","")
+			if count == scount + 1 and mountTable[i][2]:sub(1,#dir+1) == dir .. "/" then
+				table.insert(result,mountTable[i][2]:sub(#dir+2))
+			end
+		end
+	end
 	return result
 end
 function vfs.getLastModified(filename)
