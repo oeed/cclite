@@ -74,7 +74,7 @@ function sendRequest()
         }
     }
 
-    if result[2] == 302 or result[2] == 301 and httpParams.redirects < 19 then
+    if (result[2] == 302 or result[2] == 301) and httpParams.redirects < 19 and httpParams.url ~= result[3].location then -- Infinite loop detection
         httpResponseBody = {}
         httpParams.url = result[3]["location"]
         httpParams.redirects = httpParams.redirects + 1

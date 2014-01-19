@@ -45,7 +45,7 @@ function HttpRequest.new()
         self.requestChannel = love.thread.newChannel()
 
         self.requestThread:start(self.requestChannel, _DEBUG)
-        self.requestChannel:push({
+        self.requestChannel:supply({
             tostring(self.timeout),
             TSerial.pack(httpParams)
         })
