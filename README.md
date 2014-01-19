@@ -22,19 +22,19 @@ My fork of CCLite has a different save directory than Sorroko's version. Mine wi
 TODO:
 -----
 
-Verify all functions work for 0.9.0 upgrade, fix those that are broken.
-
 Add in more error checking
 
 Add in virtual redstone system
 
-Figure out how to manage disk drives and mounting.
+Finish mounting system.
 
-Make Error Levels report C functions properly.
+Make Error Levels report C functions properly
 
-Make peripheralAttach only add valid sides.
+Make peripheralAttach only add valid sides
 
 Have virtual Disk Drives work with Treasure disks
+
+Something in the HTTP libraries is trying to push numbers to TSerial
 
 **Add in missing globals:**
 

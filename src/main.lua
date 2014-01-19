@@ -1,8 +1,7 @@
-if _conf.enableAPI_http == true then require('http.HttpRequest') end
+if _conf.enableAPI_http == true then require("http.HttpRequest") end
 bit = require("bit")
-
-require('render')
-require('api')
+require("render")
+require("api")
 
 -- Load virtual peripherals.
 peripheral = {}
@@ -94,7 +93,7 @@ function Emulator:start()
 	api.init()
 	Screen:init()
 
-	local fn, err = love.filesystem.load('lua/bios.lua') -- lua/bios.lua
+	local fn, err = api.loadstring(love.filesystem.read("/lua/bios.lua"),"bios")
 	local tEnv = {}
 
 	if not fn then

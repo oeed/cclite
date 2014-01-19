@@ -24,7 +24,7 @@ function HttpRequest.new()
     self.status             = nil
     self.statusText         = nil
 
-    self.timeout            = 10
+    self.timeout            = 21
 
 
     self.abort = function()

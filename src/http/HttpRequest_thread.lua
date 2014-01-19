@@ -3,7 +3,7 @@ local httpMime          = require("mime")
 local ltn12             = require("ltn12")
 
 local cChannel          = nil
-local socketTimeout     = 10
+local socketTimeout     = 21
 
 local httpResponseBody  = {}
 local httpResponseText  = ""

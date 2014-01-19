@@ -404,6 +404,9 @@ end
 if _conf.enableAPI_http == true then
 	api.http = {}
 	function api.http.request( sUrl, sParams )
+		if type(sUrl) ~= "string" then
+			error("String expected" .. (sUrl == nil and ", got nil" or ""),2)
+		end
 		local http = HttpRequest.new()
 		local method = sParams and "POST" or "GET"
 
@@ -415,7 +418,7 @@ if _conf.enableAPI_http == true then
 		end
 
 		http.onReadyStateChange = function()
-			if http.responseText then -- TODO: check if timed out instead
+			if http.status == 200 then
 				local handle = HTTPHandle(lines(http.responseText), http.status)
 				table.insert(Emulator.eventQueue, { "http_success", sUrl, handle })
 			else
@@ -637,9 +640,7 @@ function api.fs.getSize(path)
 		return 512
 	end
 	
-	local File = love.filesystem.newFile( sPath, "r" )
-	local size = File:getSize()
-	File:close()
+	local size = love.filesystem.getSize(sPath)
 	if size == 0 then size = 512 end
 	return math.ceil(size/512)*512
 end
