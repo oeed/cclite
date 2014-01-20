@@ -11,6 +11,22 @@ If you have installed Love2D you can just double click on the .love file to run 
 
 The [forum topic](http://www.computercraft.info/forums2/index.php?/topic/13445-lightweight-cc-emulator-download-now/) for CCLite is from the original author, Sorroko, and features in mine are not guarenteed to be in his, vice versa.
 
+**HTTPS Support:**
+
+For HTTPS support, you'll need to grab:
+
+From [LuaSec](http://www.inf.puc-rio.br/~brunoos/luasec/download/luasec-0.4.1.tar.gz):
+
+  * ssl.dll
+  
+  * ssl.lua
+  
+  * https.lua (as ssl/https.lua)
+  
+You most likely also need to instal OpenSSL: [Windows](http://slproweb.com/products/Win32OpenSSL.html)
+
+Then go into conf.lua and set useLuaSec to true
+
 **Screenshots:**
 
 ![Demonstration](http://i.imgur.com/87PL9Nb.png)

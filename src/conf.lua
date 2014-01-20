@@ -27,7 +27,7 @@ _conf = {
 	compat_loadstringMask = true,
 	
 	-- Enable https connections through luasec
-	useLuaSec = true,
+	useLuaSec = false,
 	
 	-- Enable usage of Carrage Return for fs.writeLine
 	useCRLF = false,
