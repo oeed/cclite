@@ -548,9 +548,9 @@ local function contains(pathA, pathB)
 	pathA = api.fs.combine(pathA,"")
 	pathB = api.fs.combine(pathB,"")
 
-	if pathB == ".." then 
+	if pathB == ".." then
 		return false
-	elseif pathB:sub(1,3) == "../" then 
+	elseif pathB:sub(1,3) == "../" then
 		return false
 	elseif pathB == pathA then
 		return true
@@ -587,6 +587,9 @@ function api.fs.list(path)
 	local testpath = api.fs.combine("data/", path)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	path = vfs.normalize(path)
+	if not vfs.exists(path) or not vfs.isDirectory(path) then
+		error("Not a directory",2)
+	end
 	return vfs.getDirectoryItems(path)
 end
 function api.fs.exists(path)
@@ -612,11 +615,15 @@ function api.fs.isReadOnly(path)
 		error("Expected string",2)
 	end
 	path = vfs.normalize(path)
-	return path == "/rom" or path:sub(1, 5) == "/rom/" or vfs.isMountPath(path)
+	return path == "/rom" or path:sub(1, 5) == "/rom/"
 end
 function api.fs.getName(path)
 	if type(path) ~= "string" then
 		error("Expected string",2)
+	end
+	path = vfs.normalize(path)
+	if path == "/" then
+		return "root"
 	end
 	local fpath, name, ext = path:match("(.-)([^\\/]-%.?([^%.\\/]*))$")
 	return name
@@ -633,15 +640,22 @@ function api.fs.getSize(path)
 	end
 
 	if vfs.isDirectory(path) then
-		return 512
+		return 0
 	end
 	
 	local size = vfs.getSize(path)
-	if size == 0 then size = 512 end
 	return math.ceil(size/512)*512
 end
 
 function api.fs.getFreeSpace(path)
+	if type(path) ~= "string" then
+		error("Expected string",2)
+	end
+	local testpath = api.fs.combine("data/", path)
+	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
+	if path == "/rom" or path:sub(1, 5) == "/rom/" then
+		return 0
+	end
 	return math.huge
 end
 
@@ -655,7 +669,10 @@ function api.fs.makeDir(path) -- All write functions are within data/
 	if path == "/rom" or path:sub(1, 5) == "/rom/" then
 		error("Access Denied",2)
 	end
-	return vfs.createDirectory(path)
+	if vfs.exists(path) and not vfs.isDirectory(path) then
+		error("File exists",2)
+	end
+	vfs.createDirectory(path)
 end
 
 local function deltree(sFolder)
@@ -709,7 +726,7 @@ function api.fs.move(fromPath, toPath)
 	toPath = vfs.normalize(toPath)
 	if fromPath == "/rom" or fromPath:sub(1, 5) == "/rom/" or 
 		toPath == "/rom" or toPath:sub(1, 5) == "/rom/" then
-		error("Access Deined",2)
+		error("Access Denied",2)
 	end
 	if vfs.exists(fromPath) ~= true then
 		error("No such file",2)
@@ -735,7 +752,7 @@ function api.fs.copy(fromPath, toPath)
 	fromPath = vfs.normalize(fromPath)
 	toPath = vfs.normalize(toPath)
 	if toPath == "/rom" or toPath:sub(1, 5) == "/rom/" then
-		error("Access Deined",2)
+		error("Access Denied",2)
 	end
 	if vfs.exists(fromPath) ~= true then
 		error("No such file",2)
@@ -744,7 +761,7 @@ function api.fs.copy(fromPath, toPath)
 		error("File exists",2)
 	end
 	if contains(fromPath, toPath) then
-		error("Can't move a directory inside itself",2)
+		error("Can't copy a directory inside itself",2)
 	end
 	copytree(fromPath, toPath)
 end
@@ -754,10 +771,101 @@ function api.fs.delete(path)
 	local testpath = api.fs.combine("data/", path)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	path = vfs.normalize(path)
-	if path == "/rom" or path:sub(1, 5) == "/rom/" then
-		error("Access Deined",2)
+	if path == "/rom" or path:sub(1, 5) == "/rom/" or vfs.isMountPath(path) then
+		error("Access Denied",2)
 	end
 	deltree(path)
+end
+
+api.redstone = {}
+local function isval(val,...)
+	local canidates = {...}
+	for i = 1,#canidates do
+		if canidates[i] == val then
+			return true
+		end
+	end
+	return false
+end
+function api.redstone.getSides()
+	return {"top","bottom","left","right","front","back"}
+end
+function api.redstone.getInput(side)
+	if type(side) ~= "string" then
+		error("Expected string",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+	return false
+end
+function api.redstone.setOutput(side, value)
+	if type(side) ~= "string" or type(value) ~= "boolean" then
+		error("Expected string, boolean",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+end
+function api.redstone.getOutput(side)
+	if type(side) ~= "string" then
+		error("Expected string",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+	return false
+end
+function api.redstone.getAnalogInput(side)
+	if type(side) ~= "string" then
+		error("Expected string",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+	return 0
+end
+function api.redstone.setAnalogOutput(side, strength)
+	if type(side) ~= "string" or type(strength) ~= "number" then
+		error("Expected string, number",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+end
+function api.redstone.getAnalogOutput(side)
+	if type(side) ~= "string" then
+		error("Expected string",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+	return 0
+end
+function api.redstone.getBundledInput(side)
+	if type(side) ~= "string" then
+		error("Expected string",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+	return 0
+end
+function api.redstone.getBundledOutput(sude)
+	if type(side) ~= "string" then
+		error("Expected string",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+	return 0
+end
+function api.redstone.setBundledOutput(side, colors)
+	if type(side) ~= "string" or type(colors) ~= "number" then
+		error("Expected string, number",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+end
+function api.redstone.testBundledInput(side, color)
+	if type(side) ~= "string" or type(color) ~= "number" then
+		error("Expected string, number",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+	return color == 0
 end
 
 api.bit = {}
@@ -766,24 +874,59 @@ function api.bit.norm(val)
 	return val
 end
 function api.bit.blshift(n, bits)
+	if (type(n) ~= "number" and type(n) ~= "nil") or (type(bits) ~= "number" and type(bits) ~= "nil") then
+		error("number expected",2)
+	elseif n == nil or bits == nil then
+		error("too few arguments",2)
+	end
 	return api.bit.norm(bit.lshift(n, bits))
 end
 function api.bit.brshift(n, bits)
+	if (type(n) ~= "number" and type(n) ~= "nil") or (type(bits) ~= "number" and type(bits) ~= "nil") then
+		error("number expected",2)
+	elseif n == nil or bits == nil then
+		error("too few arguments",2)
+	end
 	return api.bit.norm(bit.arshift(n, bits))
 end
 function api.bit.blogic_rshift(n, bits)
+	if (type(n) ~= "number" and type(n) ~= "nil") or (type(bits) ~= "number" and type(bits) ~= "nil") then
+		error("number expected",2)
+	elseif n == nil or bits == nil then
+		error("too few arguments",2)
+	end
 	return api.bit.norm(bit.rshift(n, bits))
 end
 function api.bit.bxor(m, n)
+	if (type(m) ~= "number" and type(m) ~= "nil") or (type(n) ~= "number" and type(n) ~= "nil") then
+		error("number expected",2)
+	elseif m == nil or n == nil then
+		error("too few arguments",2)
+	end
 	return api.bit.norm(bit.bxor(m, n))
 end
 function api.bit.bor(m, n)
+	if (type(m) ~= "number" and type(m) ~= "nil") or (type(n) ~= "number" and type(n) ~= "nil") then
+		error("number expected",2)
+	elseif m == nil or n == nil then
+		error("too few arguments",2)
+	end
 	return api.bit.norm(bit.bor(m, n))
 end
 function api.bit.band(m, n)
+	if (type(m) ~= "number" and type(m) ~= "nil") or (type(n) ~= "number" and type(n) ~= "nil") then
+		error("number expected",2)
+	elseif m == nil or n == nil then
+		error("too few arguments",2)
+	end
 	return api.bit.norm(bit.band(m, n))
 end
 function api.bit.bnot(n)
+	if type(n) ~= "number" and type(n) ~= "nil" then
+		error("number expected",2)
+	elseif n == nil then
+		error("too few arguments",2)
+	end
 	return api.bit.norm(bit.bnot(n))
 end
 
@@ -894,17 +1037,17 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 			getNames = api.peripheral.getNames,
 		},
 		redstone = {
-			getSides = function() return {"top","bottom","left","right","front","back"} end,
-			getInput = function() end,
-			getOutput = function() end,
-			getBundledInput = function() end,
-			getBundledOutput = function() end,
-			getAnalogInput = function() end,
-			getAnalogOutput = function() end,
-			setOutput = function() end,
-			setBundledOutput = function() end,
-			setAnalogOutput = function() end,
-			testBundledInput = function() end,
+			getSides = api.redstone.getSides,
+			getInput = api.redstone.getInput,
+			getOutput = api.redstone.getOutput,
+			getBundledInput = api.redstone.getBundledInput,
+			getBundledOutput = api.redstone.getBundledOutput,
+			getAnalogInput = api.redstone.getAnalogInput,
+			getAnalogOutput = api.redstone.getAnalogOutput,
+			setOutput = api.redstone.setOutput,
+			setBundledOutput = api.redstone.setBundledOutput,
+			setAnalogOutput = api.redstone.setAnalogOutput,
+			testBundledInput = api.redstone.testBundledInput,
 		},
 		bit = {
 			blshift = api.bit.blshift,
