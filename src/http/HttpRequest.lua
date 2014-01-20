@@ -7,11 +7,8 @@ function HttpRequest.new()
 	local httpParams = {}
 	httpParams.headers = {}
 
-	self.requestThread = nil
-	self.requestChannel = nil
 	self.onReadyStateChange = function() end
 	self.responseText = ""
-	self.status = nil
 
 	self.open = function(pMethod, pUrl)
 		httpParams.method = pMethod or "GET"
@@ -58,6 +55,7 @@ function HttpRequest.new()
 
 		if self.requestThread:isRunning() == false and self.requestThread:getError() ~= nil then
 			print(self.requestThread:getError())
+
 			--remove request from activeRequests
 			for index = 1, #HttpRequest.activeRequests do
 				if HttpRequest.activeRequests[index].id == self.id then
@@ -65,6 +63,9 @@ function HttpRequest.new()
 					break
 				end
 			end
+			
+			--finally call onReadyStateChange callback
+			self.onReadyStateChange()
 		end
 	end
 	---------------------------------------------------------------------

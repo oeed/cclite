@@ -12,9 +12,6 @@ function waitForInstructions(channel,supportHTTPS,httpParamsMsg)
 	assert(type(httpParamsMsg) == "string", "HTTP parameters invalid.")
 
 	httpsSupport = supportHTTPS
-	if supportHTTPS == true then
-		httpsRequest = require("ssl.https")
-	end
 	httpParams = TSerial.unpack(httpParamsMsg)
 
 	httpParams.redirects = 0
@@ -27,6 +24,9 @@ function sendRequest()
 	httpRequest.TIMEOUT = 21
 
 	-- send request:
+	if httpParams.url:sub(1,6) == "https:" and httpsSupport == true and httpsRequest == nil then
+		httpsRequest = require("ssl.https")
+	end
 	local result  =
 	{
 		(httpParams.url:sub(1,6) == "https:" and httpsSupport == true and httpsRequest or httpRequest).request
