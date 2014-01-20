@@ -450,10 +450,9 @@ end
 function api.os.getComputerLabel()
 	return api.comp.label
 end
-function api.os.queueEvent(...)
-	local event = { ... }
-	if type(event[1]) ~= "string" then error("Expected string",2) end
-	table.insert(Emulator.eventQueue, event)
+function api.os.queueEvent(event, ...)
+	if type(event) ~= "string" then error("Expected string",2) end
+	table.insert(Emulator.eventQueue, {event, ...})
 end
 function api.os.startTimer(nTimeout)
 	if type(nTimeout) ~= "number" then error("Expected number",2) end
@@ -483,7 +482,7 @@ function api.os.setAlarm(nTime)
 	return nil -- Error
 end
 function api.os.shutdown()
-	Emulator:stop()
+	Emulator:stop(false)
 end
 function api.os.reboot()
 	Emulator:stop(true) -- Reboots on next update/tick
@@ -505,8 +504,7 @@ function api.peripheral.getMethods(sSide)
 	return
 end
 function api.peripheral.call(sSide, sMethod, ...)
-	if type(sSide) ~= "string" then error("Expected string",2) end
-	if type(sMethod) ~= "string" then error("Expected string, string",2) end
+	if type(sSide) ~= "string" or type(sMethod) ~= "string" then error("Expected string, string",2) end
 	if not api.cclite.peripherals[sSide] then error("No peripheral attached",2) end
 	return api.cclite.peripherals[sSide].call(sMethod, ...)
 end
@@ -544,6 +542,23 @@ function api.fs.combine(basePath, localPath)
    		end
 	end
 	return table.concat(tPath, "/")
+end
+
+local function contains(pathA, pathB)
+	pathA = api.fs.combine(pathA,"")
+	pathB = api.fs.combine(pathB,"")
+
+	if pathB == ".." then 
+		return false
+	elseif pathB:sub(1,3) == "../" then 
+		return false
+	elseif pathB == pathA then
+		return true
+	elseif #pathA == 0 then
+		return true
+	else
+		return pathB:sub(1,#pathA+1) == pathA .. "/"
+	end
 end
 
 function api.fs.open(path, mode)
@@ -692,15 +707,18 @@ function api.fs.move(fromPath, toPath)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	fromPath = vfs.normalize(fromPath)
 	toPath = vfs.normalize(toPath)
+	if fromPath == "/rom" or fromPath:sub(1, 5) == "/rom/" or 
+		toPath == "/rom" or toPath:sub(1, 5) == "/rom/" then
+		error("Access Deined",2)
+	end
 	if vfs.exists(fromPath) ~= true then
 		error("No such file",2)
 	end
 	if vfs.exists(toPath) == true then
 		error("File exists",2)
 	end
-	if fromPath == "/rom" or fromPath:sub(1, 5) == "/rom/" or 
-		toPath == "/rom" or toPath:sub(1, 5) == "/rom/" then
-		error("Access Deined",2)
+	if contains(fromPath, toPath) then
+		error("Can't move a directory inside itself",2)
 	end
 	copytree(fromPath, toPath)
 	deltree(fromPath)
@@ -716,14 +734,17 @@ function api.fs.copy(fromPath, toPath)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	fromPath = vfs.normalize(fromPath)
 	toPath = vfs.normalize(toPath)
+	if toPath == "/rom" or toPath:sub(1, 5) == "/rom/" then
+		error("Access Deined",2)
+	end
 	if vfs.exists(fromPath) ~= true then
 		error("No such file",2)
 	end
 	if vfs.exists(toPath) == true then
 		error("File exists",2)
 	end
-	if toPath == "/rom" or toPath:sub(1, 5) == "/rom/" then
-		error("Access Deined",2)
+	if contains(fromPath, toPath) then
+		error("Can't move a directory inside itself",2)
 	end
 	copytree(fromPath, toPath)
 end
