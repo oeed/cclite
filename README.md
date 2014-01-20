@@ -15,15 +15,17 @@ The [forum topic](http://www.computercraft.info/forums2/index.php?/topic/13445-l
 
 For HTTPS support, you'll need to grab:
 
-From [LuaSec](http://www.inf.puc-rio.br/~brunoos/luasec/download/luasec-0.4.1.tar.gz):
+From LuaSec: [Binaries](http://50.116.63.25/public/LuaSec-Binaries/), [Lua Code](http://www.inf.puc-rio.br/~brunoos/luasec/download/luasec-0.4.1.tar.gz):
 
-  * ssl.dll
+  * ssl.dll or ssl.so -> ssl.dll or ssl.so
   
-  * ssl.lua
+  * luasec-luasec-0.4.1/src/ssl.lua -> ssl.lua
   
-  * https.lua (as ssl/https.lua)
+  * luasec-luasec-0.4.1/src/https.lua -> ssl/https.lua
   
 You most likely also need to instal OpenSSL: [Windows](http://slproweb.com/products/Win32OpenSSL.html)
+
+Place these files where the love executable can get to them, most likely where love is installed.
 
 Then go into conf.lua and set useLuaSec to true
 
