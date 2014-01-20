@@ -5,25 +5,29 @@ local httpResponseText = ""
 local httpParams = {}
 local httpsSupport, httpsRequest, cChannel
 
-function waitForInstructions(channel,supportHTTPS,httpParamsMsg)
+function waitForInstructions(channel,supportHTTPS)
 	cChannel = channel
-
 	assert(type(supportHTTPS) == "boolean", "HTTPS support flag invalid.")
-	assert(type(httpParamsMsg) == "string", "HTTP parameters invalid.")
-
 	httpsSupport = supportHTTPS
-	httpParams = TSerial.unpack(httpParamsMsg)
+	
+	while true do
+		httpParamsMsg = cChannel:demand()
+		assert(type(httpParamsMsg) == "string", "HTTP parameters invalid.")
+		httpParams = TSerial.unpack(httpParamsMsg)
 
-	httpParams.redirects = 0
-	sendRequest()
+		httpParams.redirects = 0
+		httpResponseText = ""
+		sendRequest()
+	end
 end
 
 -- ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 function sendRequest()
+	httpResponseBody = {}
 	httpRequest.TIMEOUT = 21
 
-	-- send request:
+	-- Send request:
 	if httpParams.url:sub(1,6) == "https:" and httpsSupport == true and httpsRequest == nil then
 		httpsRequest = require("ssl.https")
 	end
@@ -41,22 +45,21 @@ function sendRequest()
 	}
 
 	if (result[2] == 302 or result[2] == 301) and httpParams.redirects < 19 and httpParams.url ~= result[3].location then -- Infinite loop detection
-		httpResponseBody = {}
 		httpParams.url = result[3]["location"]
 		httpParams.redirects = httpParams.redirects + 1
-		return sendRequest()
+		sendRequest()
 	end
 
-	-- compile responseText
+	-- Compile responseText
 	for k,v in ipairs(httpResponseBody) do
 		httpResponseText = httpResponseText .. tostring(v)
 	end
 
-	-- insert responseText in to result table
+	-- Insert responseText in to result table
 	table.insert(result, httpResponseText)
 
-	-- send results back to handler
-	cChannel:push(TSerial.pack(result))
+	-- Send results back to handler
+	cChannel:supply(TSerial.pack(result))
 end
 
 -- ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

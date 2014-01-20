@@ -1,5 +1,10 @@
 HttpRequest = {}
+HttpRequest.threads = {}
 HttpRequest.activeRequests = {}
+
+local function newThread()
+
+end
 
 function HttpRequest.new()
 	local self = {}
@@ -10,6 +15,25 @@ function HttpRequest.new()
 	self.onReadyStateChange = function() end
 	self.responseText = ""
 
+	-- Locate or create a free thread
+	local foundThread = false
+	for i = 1,#HttpRequest.threads do
+		if HttpRequest.threads[i].status == 0 then
+			self.threadObj = HttpRequest.threads[i]
+			self.threadObj.status = 1
+			foundThread = true
+			break
+		end
+	end
+	if foundThread == false then
+		self.threadObj = {}
+		self.threadObj.thread = love.thread.newThread("http/HttpRequest_thread.lua")
+		self.threadObj.channel = love.thread.newChannel()
+		self.threadObj.thread:start(self.threadObj.channel,_conf.useLuaSec)
+		self.threadObj.status = 1
+		table.insert(HttpRequest.threads,self.threadObj)
+	end
+
 	self.open = function(pMethod, pUrl)
 		httpParams.method = pMethod or "GET"
 		httpParams.url = pUrl
@@ -17,11 +41,9 @@ function HttpRequest.new()
 	---------------------------------------------------------------------
 	self.send = function(pString)
 		httpParams.body = pString or ""
-
-		self.requestThread = love.thread.newThread("http/HttpRequest_thread.lua")
-		self.requestChannel = love.thread.newChannel()
-
-		self.requestThread:start(self.requestChannel,_conf.useLuaSec,TSerial.pack(httpParams))
+		
+		self.threadObj.channel:supply(TSerial.pack(httpParams))
+		self.threadObj.status = 2
 	end
 	---------------------------------------------------------------------
 	self.setRequestHeader = function(pName, pValue)
@@ -29,49 +51,60 @@ function HttpRequest.new()
 	end
 	---------------------------------------------------------------------
 	self.checkRequest = function()
-		-- look for async thread response message
-		if self.requestChannel and self.requestChannel:getCount() > 0 then
-			--unpack message
-			result = TSerial.unpack(self.requestChannel:pop())
+		-- Look for async thread response message
+		if self.threadObj.channel and self.threadObj.channel:getCount() > 0 then
+			-- Unpack message
+			result = TSerial.unpack(self.threadObj.channel:pop())
 
-			self.requestChannel:clear()
+			self.threadObj.channel:clear()
 
-			--set status
+			-- Set status
 			self.status = result[2]
-			--set responseText
+			-- Set responseText
 			self.responseText = result[5]
 
-			--remove request from activeRequests
-			for index = 1, #HttpRequest.activeRequests do
-				if HttpRequest.activeRequests[index].id == self.id then
-					table.remove(HttpRequest.activeRequests, index)
+			-- Remove request from activeRequests
+			for i = 1, #HttpRequest.activeRequests do
+				if HttpRequest.activeRequests[i] == self then
+					table.remove(HttpRequest.activeRequests, i)
 					break
 				end
 			end
 
-			--finally call onReadyStateChange callback
+			-- Mark thread as avaliable again
+			self.threadObj.status = 0
+			
+			-- Finally call onReadyStateChange callback
 			self.onReadyStateChange()
 		end
 
-		if self.requestThread:isRunning() == false and self.requestThread:getError() ~= nil then
-			print(self.requestThread:getError())
+		if self.threadObj.thread:isRunning() == false then
+			print(self.threadObj.thread:getError())
 
-			--remove request from activeRequests
-			for index = 1, #HttpRequest.activeRequests do
-				if HttpRequest.activeRequests[index].id == self.id then
-					table.remove(HttpRequest.activeRequests, index)
+			-- Remove request from activeRequests
+			for i = 1, #HttpRequest.activeRequests do
+				if HttpRequest.activeRequests[i] == self then
+					table.remove(HttpRequest.activeRequests, i)
 					break
 				end
 			end
 			
-			--finally call onReadyStateChange callback
+			-- Remove dead thread from avaliable threads
+			for i = 1, #HttpRequest.threads do
+				if HttpRequest.threads[i] == self.threadObj then
+					table.remove(HttpRequest.threads, i)
+					break
+				end
+			end
+			
+			-- Finally call onReadyStateChange callback
 			self.onReadyStateChange()
 		end
 	end
 	---------------------------------------------------------------------
 
 	table.insert(HttpRequest.activeRequests, self)
-	return HttpRequest.activeRequests[table.getn(HttpRequest.activeRequests)]
+	return self
 end
 
 
