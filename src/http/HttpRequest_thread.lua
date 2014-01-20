@@ -1,55 +1,21 @@
-local httpRequest       = require("socket.http")
-local httpMime          = require("mime")
-local ltn12             = require("ltn12")
+local ltn12  = require("ltn12")
+local httpRequest = require("socket.http")
+local httpResponseBody = {}
+local httpResponseText = ""
+local httpParams = {}
+local httpsSupport, httpsRequest, cChannel
 
-local cChannel          = nil
-local socketTimeout     = 21
-
-local httpResponseBody  = {}
-local httpResponseText  = ""
-local httpParams        = {}
-
-local requestDebug      = false
-
-function waitForInstructions(channel, debug)
+function waitForInstructions(channel,supportHTTPS,httpParamsMsg)
     cChannel = channel
-    requestDebug = debug or false
 
-    --set message vars
-    local tData = cChannel:demand()
+    assert(type(supportHTTPS) == "boolean", "HTTPS support flag invalid.")
+    assert(type(httpParamsMsg) == "string", "HTTP parameters invalid.")
 
-    assert(type(tData) == "table", "No data received.")
-
-    local socketTimeoutMsg = tData[1]
-    local httpParamsMsg = tData[2]
-
-    assert(type(socketTimeoutMsg) == "string", "Socket timeout invalid.")
-    assert(type(httpParamsMsg) == "string", "Socket timeout invalid.")
-
-    socketTimeout = tonumber(socketTimeoutMsg)
+    httpsSupport = supportHTTPS
+	if supportHTTPS == true then
+		httpsRequest = require("ssl.https")
+	end
     httpParams = TSerial.unpack(httpParamsMsg)
-
-    if requestDebug == true then
-        print("---REQUEST TIMEOUT----")
-        print("Timeout: "..socketTimeout)
-        print("---REQUEST PARAMS-----")
-        for k,v in pairs(httpParams) do
-            if k ~= "headers" then
-                print(k .. ": " .. tostring(httpParams[k]))
-            end
-        end
-        print(" ")
-        print("---REQUEST HEADERS----")
-        for k,v in pairs(httpParams) do
-            --print(k .. ": " .. tostring(httpParams[k]))
-            if k == "headers" then
-                for k2,v2 in pairs(httpParams[k]) do
-                    print("header: ["..tostring(k2).."] = "..tostring(v2))
-                end
-            end
-        end
-        print("     ")
-    end
 
     httpParams.redirects = 0
     sendRequest()
@@ -58,21 +24,21 @@ end
 -- ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
 function sendRequest()
-    httpRequest.TIMEOUT = socketTimeout
+    httpRequest.TIMEOUT = 21
 
     -- send request:
-    local result  =
-    {
-        httpRequest.request
-        {
-            method      = httpParams.method,
-            url         = httpParams.url,
-            headers     = httpParams.headers,
-            source      = ltn12.source.string(httpParams.body),
-            sink        = ltn12.sink.table(httpResponseBody),
-            redirect    = true
-        }
-    }
+	local result  =
+	{
+		(httpParams.url:sub(1,6) == "https:" and httpsSupport == true and httpsRequest or httpRequest).request
+		{
+			method      = httpParams.method,
+			url         = httpParams.url,
+			headers     = httpParams.headers,
+			source      = ltn12.source.string(httpParams.body),
+			sink        = ltn12.sink.table(httpResponseBody),
+			redirect    = false
+		}
+	}
 
     if (result[2] == 302 or result[2] == 301) and httpParams.redirects < 19 and httpParams.url ~= result[3].location then -- Infinite loop detection
         httpResponseBody = {}
@@ -88,30 +54,6 @@ function sendRequest()
 
     -- insert responseText in to result table
     table.insert(result, httpResponseText)
-
-    -- DEBUG CODE
-    if requestDebug == true then
-        print("---RESPONSE HEADERS---")
-        for k, v in pairs(result) do
-            if type(result[k]) == "table" then
-                for k2, v2 in pairs(result[k]) do
-                    local tbl = result[k]
-                    print("header: " .. "["..tostring(k2).."] = ".. tbl[k2])
-                end
-            end
-        end
-        for k, v in pairs(result) do
-            print(v)
-        end
-        print(" ")
-        print("---RESPONSE PARAMS---")
-        print("readyState: ".. tostring(result[1]) )
-        print("statusCode: ".. tostring(result[2]) )
-        print("statusText: ".. tostring(result[4]) )
-        print("responseText: " .. httpResponseText )
-        print("---------------------")
-
-    end
 
     -- send results back to handler
     cChannel:push(TSerial.pack(result))
@@ -147,11 +89,8 @@ function TSerial.pack(t)
 end
 
 function TSerial.unpack(s)
-    assert(type(s) == "string", "Can only TSerial.unpack strings.")
-    assert(loadstring("TSerial.table="..s))()
-    local t = TSerial.table
-    TSerial.table = nil
-    return t
+    assert(type(s) == "string", "TSerial.unpack: string expected, got " .. type(s))
+    return assert(loadstring("return "..s))()
 end
 
 -- ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::

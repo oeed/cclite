@@ -407,6 +407,9 @@ if _conf.enableAPI_http == true then
 		if type(sUrl) ~= "string" then
 			error("String expected" .. (sUrl == nil and ", got nil" or ""),2)
 		end
+		if sUrl:sub(1,5) ~= "http:" and sUrl:sub(1,6) ~= "https:" then
+			error("Invalid URL",2)
+		end
 		local http = HttpRequest.new()
 		local method = sParams and "POST" or "GET"
 
@@ -520,14 +523,23 @@ function api.fs.combine(basePath, localPath)
 	if type(basePath) ~= "string" or type(localPath) ~= "string" then
 		error("Expected string, string",2)
 	end
-	local path = "/" .. basePath .. "/" .. localPath
+	local path = ("/" .. basePath .. "/" .. localPath):gsub("\\", "/")
+	
+	local cleanName = ""
+	for i = 1,#path do
+		local c = path:sub(i,i):byte()
+		if c >= 32 and c ~= 34 and c ~= 42 and c ~= 58 and c ~= 60 and c ~= 62 and c ~= 63 and c ~= 124 then
+			cleanName = cleanName .. string.char(c)
+		end
+	end
+	
 	local tPath = {}
-	for part in path:gmatch("[^/]+") do
+	for part in cleanName:gmatch("[^/]+") do
    		if part ~= "" and part ~= "." then
-   			if part == ".." and #tPath > 0 then
+   			if part == ".." and #tPath > 0 and tPath[1] ~= ".." then
    				table.remove(tPath)
    			else
-   				table.insert(tPath, part)
+   				table.insert(tPath, part:sub(1,255))
    			end
    		end
 	end

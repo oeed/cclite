@@ -23,11 +23,14 @@ _conf = {
 	-- Enable emulation of buggy Clipboard handling
 	compat_faultyClip = true,
 	
-	-- Enable usage of Carrage Return for fs.writeLine
-	useCRLF = false,
-	
 	-- Mask [string "source"] from loadstring
 	compat_loadstringMask = true,
+	
+	-- Enable https connections through luasec
+	useLuaSec = true,
+	
+	-- Enable usage of Carrage Return for fs.writeLine
+	useCRLF = false,
 }
 function love.conf(t)
 	t.identify = "ccemu"

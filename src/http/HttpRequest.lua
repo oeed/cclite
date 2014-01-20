@@ -4,35 +4,15 @@ HttpRequest.activeRequests = {}
 function HttpRequest.new()
     local self = {}
 
-    local httpRequest       = require("socket.http")
-    local httpMime          = require("mime")
-    local httpUrl           = require("socket.url")
     local httpParams        = {}
     httpParams.headers      = {}
 
-    local ltn12             = require("ltn12")
-
     self.requestThread      = nil
     self.requestChannel     = nil
-
-    self.onreadystatechange = function() end
-    self.readyState         = 0
-
+    self.onReadyStateChange = function() end
     self.responseText       = ""
-    self.responseXML        = nil
-
     self.status             = nil
-    self.statusText         = nil
 
-    self.timeout            = 21
-
-
-    self.abort = function()
-    end
-    self.getAllResponseHeaders = function()
-    end
-    self.getResponseHeader = function()
-    end
     self.open = function(pMethod, pUrl)
         httpParams.method   = pMethod or "GET"
         httpParams.url      = pUrl
@@ -44,11 +24,7 @@ function HttpRequest.new()
         self.requestThread = love.thread.newThread("http/HttpRequest_thread.lua")
         self.requestChannel = love.thread.newChannel()
 
-        self.requestThread:start(self.requestChannel, _DEBUG)
-        self.requestChannel:supply({
-            tostring(self.timeout),
-            TSerial.pack(httpParams)
-        })
+        self.requestThread:start(self.requestChannel,_conf.useLuaSec,TSerial.pack(httpParams))
     end
     ---------------------------------------------------------------------
     self.setRequestHeader = function(pName, pValue)
@@ -63,22 +39,17 @@ function HttpRequest.new()
 
             self.requestChannel:clear()
 
-            -- set readyState
-            self.readyState = 4
             --set status
             self.status = result[2]
-            --set statusText
-            self.statusText = result[4]
             --set responseText
             self.responseText = result[5]
 
             --remove request from activeRequests
-            local index = 1
-            for k, v in ipairs(HttpRequest.activeRequests) do
-                if HttpRequest.activeRequests[k].id == self.id then
+            for index = 1, #HttpRequest.activeRequests do
+                if HttpRequest.activeRequests[index].id == self.id then
                     table.remove(HttpRequest.activeRequests, index)
+					break
                 end
-                index = index + 1
             end
 
             --finally call onReadyStateChange callback
@@ -130,9 +101,6 @@ function TSerial.pack(t)
 end
 
 function TSerial.unpack(s)
-    assert(type(s) == "string", "Can only TSerial.unpack strings.")
-    assert(loadstring("TSerial.table="..s))()
-    local t = TSerial.table
-    TSerial.table = nil
-    return t
+    assert(type(s) == "string", "TSerial.unpack: string expected, got " .. type(s))
+    return assert(loadstring("return "..s))()
 end

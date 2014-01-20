@@ -212,8 +212,7 @@ function  love.mousepressed( x, y, _button )
 end
 
 function love.textinput(unicode)
-	local byte = string.byte(unicode)
-   	if ChatAllowedCharacters[byte] == true then
+   	if ChatAllowedCharacters[unicode:byte()] == true then
     	table.insert(Emulator.eventQueue, {"char", unicode})
     end
 end
@@ -239,7 +238,7 @@ function love.keypressed(key, isrepeat)
 		if nloc > 0 then
 			cliptext = cliptext:sub(1, nloc - (_conf.compat_faultyClip == true and 2 or 1))
 		end
-		cliptext = cliptext:sub(1,128)
+		cliptext = cliptext:sub(1,127)
 		for i = 1,#cliptext do
 			love.textinput(cliptext:sub(i,i))
 		end
