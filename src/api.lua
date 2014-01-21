@@ -428,7 +428,7 @@ end
 
 api.os = {}
 function api.os.clock()
-	return math.floor(os.clock()*20)/20
+	return math.floor(os.clock()*20)/20 - api.comp.startTime
 end
 function api.os.time()
 	return math.floor((os.clock()*0.02)%24*1000)/1000
@@ -925,6 +925,7 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 		fg = 1,
 		blink = false,
 		label = nil,
+		startTime = math.floor(os.clock()*20)/20
 	}
 	api.env = {
 		_VERSION = "Luaj-jse 2.0.3",
