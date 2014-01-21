@@ -24,7 +24,7 @@ if _conf.useLuaSec then
 	end)
 	if stat ~= true then
 		_conf.useLuaSec = false
-		Screen:message("HTTPS could not be loaded, disabled.")
+		Screen:message("Could not load HTTPS support")
 		if err:find("module 'ssl.core' not found") then
 			print("CCLite cannot find ssl.dll or ssl.so\n\n" .. err)
 		elseif err:find("The specified procedure could not be found") then
@@ -354,8 +354,16 @@ function love.update(dt)
 			Emulator.actions.alarms[k] = nil
 		end
 	end
-
-	--MOUSE
+	
+	-- Messages
+	for i = 1, 10 do
+		if now - Screen.messages[i][2] > 5 and Screen.messages[i][3] == true then
+			Screen.messages[i][3] = false
+			Screen.dirty = true
+		end
+	end
+	
+	-- Mouse
 	if Emulator.mouse.isPressed then
 		local mouseX = love.mouse.getX()
 		local mouseY = love.mouse.getY()

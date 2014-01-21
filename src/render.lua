@@ -78,13 +78,14 @@ for i = 32,126 do Screen.tOffset[string.char(i)] = math.floor(3 - Screen.font:ge
 Screen.tOffset["@"] = 0
 Screen.tOffset["~"] = 0
 
+local msgTime = love.timer.getTime() + 5
 for i = 1,10 do
-	Screen.messages[i] = {"",love.timer.getTime()}
+	Screen.messages[i] = {"",msgTime,true}
 end
 
 local COLOUR_FULL_WHITE = {255,255,255}
 local COLOUR_FULL_BLACK = {0,0,0}
-local COLOUR_HALF_BLACK = {0,0,0,64}
+local COLOUR_HALF_BLACK = {0,0,0,72}
 
 -- Local functions are faster than global
 local lsetCol = love.graphics.setColor
@@ -109,7 +110,7 @@ function Screen:message(message)
 	for i = 1,9 do
 		self.messages[i] = self.messages[i+1]
 	end
-	self.messages[10] = {message,love.timer.getTime()}
+	self.messages[10] = {message,love.timer.getTime(),true}
 end
 
 local function drawMessage(message,x,y)
@@ -164,7 +165,7 @@ function Screen:draw()
 
 	-- Render emulator elements
 	for i = 1,10 do
-		if love.timer.getTime() - self.messages[i][2] <= 5 then
+		if self.messages[i][3] then
 			drawMessage(self.messages[i][1],_conf.terminal_guiScale, self.sHeight - (self.pixelHeight * (11 - i)))
 		end
 	end
