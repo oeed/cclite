@@ -237,12 +237,11 @@ function love.keypressed(key, isrepeat)
 
 	if love.keyboard.isDown("ctrl") and key == "v" then
 		local cliptext = love.system.getClipboardText()
-		cliptext = cliptext:gsub("\r\n","\n")
+		cliptext = cliptext:gsub("\r\n","\n"):sub(1,127)
 		local nloc = cliptext:find("\n") or -1
 		if nloc > 0 then
 			cliptext = cliptext:sub(1, nloc - (_conf.compat_faultyClip == true and 2 or 1))
 		end
-		cliptext = cliptext:sub(1,127)
 		for i = 1,#cliptext do
 			love.textinput(cliptext:sub(i,i))
 		end

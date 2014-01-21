@@ -204,23 +204,13 @@ if _conf.compat_loadstringMask == true then
 		source = source or "string"
 		if type(str) ~= "string" and type(str) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
 		if type(source) ~= "string" and type(source) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
-		source = tostring(source)
-		local file = love.filesystem.newFile(source,"w")
-		file:write(str)
-		file:close()
-		local stat, f, err = pcall(function() return love.filesystem.load(source) end)
-		love.filesystem.remove(source)
-		if not stat then
-			-- Fall back to old method.
-			local f, err = loadstring(str, source)
-			if f then
-				setfenv(f, api.env)
-			end
+		local f, err = loadstring(str, "=" .. source)
+		if f == nil then
+			-- Get the normal error message
+			local _, err = loadstring(str, source)
 			return f, err
 		end
-		if f then
-			setfenv(f, api.env)
-		end
+		setfenv(f, api.env)
 		return f, err
 	end
 else
