@@ -189,9 +189,6 @@ function love.load()
 	end
 
 	love.filesystem.setIdentity("ccemu")
-	
-	vfs.mount("/data","/")
-	vfs.mount("/lua/rom","/rom")
 
 	local fontPack = {131,161,163,166,170,171,172,174,186,187,188,189,191,196,197,198,199,201,209,214,215,216,220,224,225,226,228,229,230,231,232,233,234,235,236,237,238,239,241,242,243,244,246,248,249,250,251,252,255}
 	ChatAllowedCharacters = {}
@@ -207,6 +204,9 @@ function love.load()
 		love.filesystem.createDirectory("data/") -- Make the user data folder
 	end
 
+	vfs.mount("/data","/")
+	vfs.mount("/lua/rom","/rom")
+	
 	love.keyboard.setKeyRepeat(true)
 
 	Emulator:start()

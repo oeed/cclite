@@ -1,5 +1,6 @@
-local ID = 1
+local ID = 0
 function peripheral.diskDrive(sSide)
+	-- TODO Fully test this.
 	-- DiskDrive is in progress, usage disabled
 	if true then return end
 	local obj = {}
@@ -12,11 +13,14 @@ function peripheral.diskDrive(sSide)
 		if sMethod == "isDiskPresent" then
 			return content.type ~= ""
 		elseif sMethod == "getDiskLabel" then
-			return content.label
+			return content.label or content.title
 		elseif sMethod == "setDiskLabel" then
 			sLabel = unpack(tArgs)
 			if type(sLabel) ~= "string" and type(sLabel) ~= "nil" then
 				error("Expected string",2)
+			end
+			if content.type == "audio" then
+				error("Disk label cannot be changed",2)
 			end
 			if content.type == "data" then
 				content.label = sLabel
@@ -24,7 +28,10 @@ function peripheral.diskDrive(sSide)
 		elseif sMethod == "hasData" then
 			return content.type == "data"
 		elseif sMethod == "getMountPath" then
-			-- How to handle this, emulator has no mounting system currently.
+			if content.type ~= "data" then
+				return
+			end
+			return content.mount
 		elseif sMethod == "hasAudio" then
 			return content.type == "audio"
 		elseif sMethod == "getAudioTitle" then
@@ -32,9 +39,18 @@ function peripheral.diskDrive(sSide)
 		elseif sMethod == "playAudio" then
 		elseif sMethod == "stopAudio" then
 		elseif sMethod == "ejectDisk" then
-			if content.type == "data" then table.insert(Emulator.eventQueue, {"disk_eject", side}) end
+			if content.type ~= "" then
+				table.insert(Emulator.eventQueue, {"disk_eject", side})
+				if content.type == "data" then
+					vfs.unmount(content.mount)
+				end
+			end
 			content = {type = ""}
 		elseif sMethod == "getDiskID" then
+			if content.type ~= "data" then
+				return
+			end
+			return content.id
 		else
 			error("No such method " .. sMethod,2)
 		end
@@ -42,12 +58,36 @@ function peripheral.diskDrive(sSide)
 	function obj.ccliteCall(sMethod, ...)
 		local tArgs = {...}
 		if sMethod == "diskLoad" then
-			local sType, sLabel = unpack(tArgs)
+			local sType, sLabel, nID = unpack(tArgs)
 			if type(sType) ~= "string" then error("Expected string",2) end
 			if content.type ~= "" then error("Item already in disk drive",2) end
 			if sType == "data" then
-				if type(sLabel) ~= "string" and type(sLabel) ~= "nil" then error("Expected string, string or nil",2) end
-				content = {type = "data", label = sLabel}
+				if (type(sLabel) ~= "string" and type(sLabel) ~= "nil") or (type(nID) ~= "number" and type(nID) ~= "nil") then error("Expected string, string or nil, number or nil",2) end
+				if nID == nil then
+					nID = ID
+					ID = ID + 1
+				end
+				content = {type = "data", label = sLabel, id = nID}
+				if not love.filesystem.exists("disk/") then
+					love.filesystem.createDirectory("disk/")
+				end
+				if not love.filesystem.exists("disk/" .. nID) then
+					love.filesystem.createDirectory("disk/" .. nID)
+				end
+				if vfs.exists("/disk") then
+					i = 2
+					while true do
+						if not vfs.exists("/disk" .. i) then
+							vfs.mount("/disk/" .. nID, "/disk" .. i)
+							break
+						end
+						i = i + 1
+					end
+					content.mount = "disk" .. i
+				else
+					vfs.mount("/disk/" .. nID, "/disk")
+					content.mount = "disk"
+				end
 				table.insert(Emulator.eventQueue, {"disk", side})
 			elseif sType == "audio" then
 				if type(sLabel) ~= "string" then error("Expected string, string",2) end
