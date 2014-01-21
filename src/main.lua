@@ -1,8 +1,41 @@
-if _conf.enableAPI_http == true then require("http.HttpRequest") end
+-- Verify configuration
+assert(type(_conf.enableAPI_http) == "boolean", "Invalid value for _conf.enableAPI_http")
+assert(type(_conf.enableAPI_cclite) == "boolean", "Invalid value for _conf.enableAPI_cclite")
+assert(type(_conf.terminal_height) == "number", "Invalid value for _conf.terminal_height")
+assert(type(_conf.terminal_width) == "number", "Invalid value for _conf.terminal_width")
+assert(type(_conf.terminal_guiScale) == "number", "Invalid value for _conf.terminal_guiScale")
+assert(type(_conf.cclite_showFPS) == "boolean", "Invalid value for _conf.cclite_showFPS")
+assert(type(_conf.lockfps) == "number", "Invalid value for _conf.lockfps")
+assert(type(_conf.compat_faultyClip) == "boolean", "Invalid value for _conf.compat_faultyClip")
+assert(type(_conf.compat_loadstringMask) == "boolean", "Invalid value for _conf.compat_loadstringMask")
+assert(type(_conf.useLuaSec) == "boolean", "Invalid value for _conf.useLuaSec")
+assert(type(_conf.useCRLF) == "boolean", "Invalid value for _conf.useCRLF")
+
+if _conf.enableAPI_http then require("http.HttpRequest") end
 bit = require("bit")
 require("render")
 require("api")
 require("vfs")
+
+-- Test if HTTPS is working.
+if _conf.useLuaSec then
+	local stat, err = pcall(function()
+		local trash = require("ssl.https")
+	end)
+	if stat ~= true then
+		_conf.useLuaSec = false
+		Screen:message("HTTPS could not be loaded, disabled.")
+		if err:find("module 'ssl.core' not found") then
+			print("CCLite cannot find ssl.dll or ssl.so\n\n" .. err)
+		elseif err:find("The specified procedure could not be found") then
+			print("CCLite cannot find ssl.lua\n\n" .. err)
+		elseif err:find("module 'ssl.https' not found") then
+			print("CCLite cannot find ssl/https.lua\n\n" .. err)
+		else
+			print(err)
+		end
+	end
+end
 
 -- Load virtual peripherals.
 peripheral = {}
@@ -93,11 +126,16 @@ Emulator = {
 
 function Emulator:start()
 	self.reboot = false
+	for y = 1, Screen.height do
+		for x = 1, Screen.width do
+			Screen.textB[y][x] = " "
+			Screen.backgroundColourB[y][x] = 32768
+		end
+	end
+	Screen.dirty = true
 	api.init()
-	Screen:init()
 
 	local fn, err = api.loadstring(love.filesystem.read("/lua/bios.lua"),"bios")
-	local tEnv = {}
 
 	if not fn then
 		print(err)
@@ -154,14 +192,6 @@ function love.load()
 	
 	vfs.mount("/data","/")
 	vfs.mount("/lua/rom","/rom")
-	
-	local glyphs = ""
-	for i = 32,126 do
-		glyphs = glyphs .. string.char(i)
-	end
-	font = love.graphics.newImageFont("res/minecraft.png",glyphs)
-	font:setFilter("nearest","nearest")
-	love.graphics.setFont(font)
 
 	local fontPack = {131,161,163,166,170,171,172,174,186,187,188,189,191,196,197,198,199,201,209,214,215,216,220,224,225,226,228,229,230,231,232,233,234,235,236,237,238,239,241,242,243,244,246,248,249,250,251,252,255}
 	ChatAllowedCharacters = {}
@@ -216,7 +246,7 @@ function  love.mousepressed(x, y, _button)
 end
 
 function love.textinput(unicode)
-   	if ChatAllowedCharacters[unicode:byte()] == true then
+   	if ChatAllowedCharacters[unicode:byte()] then
 		table.insert(Emulator.eventQueue, {"char", unicode})
 	end
 end
@@ -240,7 +270,7 @@ function love.keypressed(key, isrepeat)
 		cliptext = cliptext:gsub("\r\n","\n"):sub(1,127)
 		local nloc = cliptext:find("\n") or -1
 		if nloc > 0 then
-			cliptext = cliptext:sub(1, nloc - (_conf.compat_faultyClip == true and 2 or 1))
+			cliptext = cliptext:sub(1, nloc - (_conf.compat_faultyClip and 2 or 1))
 		end
 		for i = 1,#cliptext do
 			love.textinput(cliptext:sub(i,i))
@@ -280,7 +310,7 @@ end
 function love.update(dt)
 	if _conf.lockfps > 0 then next_time = next_time + min_dt end
 	local now = love.timer.getTime()
-	if _conf.enableAPI_http == true then HttpRequest.checkRequests() end
+	if _conf.enableAPI_http then HttpRequest.checkRequests() end
 	if Emulator.reboot then Emulator:start() end
 
 	updateShortcut("terminate", "ctrl", "t", function()
@@ -342,34 +372,11 @@ function love.update(dt)
 		end
 	end
 
-	local currentClock = os.clock()
-
 	if #Emulator.eventQueue > 0 then
 		for k, v in pairs(Emulator.eventQueue) do
 			Emulator:resume(unpack(v))
 		end
 		Emulator.eventQueue = {}
-	end
-end
-
-local lastFPS,fps = love.timer.getTime(),love.timer.getFPS()
-function love.draw()
-	if Screen.dirty then
-		Screen:draw()
-		if _conf.cclite_showFPS then
-			love.graphics.setColor({0,0,0})
-			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.sWidth) - (Screen.pixelWidth * 8), 11, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
-			love.graphics.setColor({255,255,255})
-			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.sWidth) - (Screen.pixelWidth * 8) - 1, 10, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
-		end
-	end
-	if _conf.lockfps > 0 and Emulator.running then 
-		local cur_time = love.timer.getTime()
-		if next_time <= cur_time then
-			next_time = cur_time
-			return
-		end
-		love.timer.sleep(next_time - cur_time)
 	end
 end
 
@@ -379,8 +386,6 @@ function love.run()
 	math.random() math.random()
 
 	love.load(arg)
-
-	local dt = 0
 
 	-- Main loop time.
 	while true do
@@ -400,17 +405,29 @@ function love.run()
 			end
 		end
 
-		-- Update dt, as we'll be passing it to update
+		-- Update the FPS counter
 		love.timer.step()
-		dt = love.timer.getDelta()
 
 		-- Call update and draw
 		love.update(dt) -- will pass 0 if love.timer is disabled
 		if not love.window.isVisible() then Screen.dirty = false end
-		love.draw()
+		if Screen.dirty then
+			Screen:draw()
+		end
 
+		if _conf.lockfps > 0 and Emulator.running then 
+			local cur_time = love.timer.getTime()
+			if next_time < cur_time then
+				next_time = cur_time
+			else
+				love.timer.sleep(next_time - cur_time)
+			end
+		end
+		
 		if love.timer then love.timer.sleep(0.001) end
-		if Screen.dirty then love.graphics.present() end
-		Screen.dirty = false
+		if Screen.dirty then
+			love.graphics.present()
+			Screen.dirty = false
+		end
 	end
 end

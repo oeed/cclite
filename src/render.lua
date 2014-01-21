@@ -52,36 +52,39 @@ Screen = {
 	lastCursor = nil,
 	dirty = true,
 	tOffset = {},
+	messages = {},
 	setup = false,
 }
-function Screen:init()
-	if self.setup == false then
-		for y = 1, self.height do
-			self.textB[y] = {}
-			self.backgroundColourB[y] = {}
-			self.textColourB[y] = {}
-			for x = 1, self.width do
-				self.textB[y][x] = " "
-				self.backgroundColourB[y][x] = 32768
-				self.textColourB[y][x] = 1
-			end
-		end
-
-		self.font = love.graphics.getFont()
-		for i = 32,126 do self.tOffset[string.char(i)] = math.floor(3 - self.font:getWidth(string.char(i)) / 2) * _conf.terminal_guiScale end
-		self.tOffset["@"] = 0
-		self.tOffset["~"] = 0
-		self.setup = true
-	else
-		for y = 1, self.height do
-			for x = 1, self.width do
-				self.textB[y][x] = " "
-				self.backgroundColourB[y][x] = 32768
-			end
-		end
+for y = 1, Screen.height do
+	Screen.textB[y] = {}
+	Screen.backgroundColourB[y] = {}
+	Screen.textColourB[y] = {}
+	for x = 1, Screen.width do
+		Screen.textB[y][x] = " "
+		Screen.backgroundColourB[y][x] = 32768
+		Screen.textColourB[y][x] = 1
 	end
-	self.dirty = true
 end
+
+local glyphs = ""
+for i = 32,126 do
+	glyphs = glyphs .. string.char(i)
+end
+Screen.font = love.graphics.newImageFont("res/minecraft.png",glyphs)
+Screen.font:setFilter("nearest","nearest")
+love.graphics.setFont(Screen.font)
+
+for i = 32,126 do Screen.tOffset[string.char(i)] = math.floor(3 - Screen.font:getWidth(string.char(i)) / 2) * _conf.terminal_guiScale end
+Screen.tOffset["@"] = 0
+Screen.tOffset["~"] = 0
+
+for i = 1,10 do
+	Screen.messages[i] = {"",love.timer.getTime()}
+end
+
+local COLOUR_FULL_WHITE = {255,255,255}
+local COLOUR_FULL_BLACK = {0,0,0}
+local COLOUR_HALF_BLACK = {0,0,0,64}
 
 -- Local functions are faster than global
 local lsetCol = love.graphics.setColor
@@ -92,17 +95,33 @@ local tOffset = Screen.tOffset
 local decWidth = Screen.width - 1
 local decHeight = Screen.height - 1
 
-local lastColor
-local function setColor(c,f)
-	if f or lastColor ~= c then
+local lastColor = COLOUR_FULL_WHITE
+local function setColor(c)
+	if lastColor ~= c then
 		lastColor = c
 		lsetCol(c)
 	end
 end
 
+local messages = {}
+
+function Screen:message(message)
+	for i = 1,9 do
+		self.messages[i] = self.messages[i+1]
+	end
+	self.messages[10] = {message,love.timer.getTime()}
+end
+
+local function drawMessage(message,x,y)
+	setColor(COLOUR_HALF_BLACK)
+	ldrawRect("fill", x, y - _conf.terminal_guiScale, Screen.font:getWidth(message) * _conf.terminal_guiScale, Screen.pixelHeight)
+	setColor(COLOUR_FULL_WHITE)
+	lprint(message, x, y, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
+end
+
 function Screen:draw()
 	if not Emulator.running then
-		lsetCol({0,0,0})
+		setColor(COLOUR_FULL_BLACK)
 		ldrawRect("fill", 0, 0, self.sWidth, self.sHeight)
 		return
 	end
@@ -111,7 +130,7 @@ function Screen:draw()
 	-- Should only update sections that changed.
 
 	-- Render the Background Color
-	setColor(COLOUR_CODE[self.backgroundColourB[1][1]], true)
+	setColor(COLOUR_CODE[self.backgroundColourB[1][1]])
 	for y = 0, decHeight do
 		for x = 0, decWidth do
 
@@ -141,5 +160,16 @@ function Screen:draw()
 	if api.comp.blink and self.showCursor then
 		setColor(COLOUR_CODE[api.comp.fg])
 		lprint("_", (api.comp.cursorX - 1) * self.pixelWidth + tOffset["_"] + _conf.terminal_guiScale, (api.comp.cursorY - 1) * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
+	end
+
+	-- Render emulator elements
+	for i = 1,10 do
+		if love.timer.getTime() - self.messages[i][2] <= 5 then
+			drawMessage(self.messages[i][1],_conf.terminal_guiScale, self.sHeight - (self.pixelHeight * (11 - i)))
+		end
+	end
+
+	if _conf.cclite_showFPS then
+		drawMessage("FPS: " .. Emulator.FPS, self.sWidth - (49 * _conf.terminal_guiScale), _conf.terminal_guiScale * 2)
 	end
 end
