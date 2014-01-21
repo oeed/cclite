@@ -1,8 +1,6 @@
 local ID = 0
 function peripheral.diskDrive(sSide)
 	-- TODO Fully test this.
-	-- DiskDrive is in progress, usage disabled
-	if true then return end
 	local obj = {}
 	local content = {type = ""}
 	local side = sSide

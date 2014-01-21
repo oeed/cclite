@@ -7,7 +7,6 @@ assert(type(_conf.terminal_guiScale) == "number", "Invalid value for _conf.termi
 assert(type(_conf.cclite_showFPS) == "boolean", "Invalid value for _conf.cclite_showFPS")
 assert(type(_conf.lockfps) == "number", "Invalid value for _conf.lockfps")
 assert(type(_conf.compat_faultyClip) == "boolean", "Invalid value for _conf.compat_faultyClip")
-assert(type(_conf.compat_loadstringMask) == "boolean", "Invalid value for _conf.compat_loadstringMask")
 assert(type(_conf.useLuaSec) == "boolean", "Invalid value for _conf.useLuaSec")
 assert(type(_conf.useCRLF) == "boolean", "Invalid value for _conf.useCRLF")
 
@@ -16,6 +15,10 @@ bit = require("bit")
 require("render")
 require("api")
 require("vfs")
+
+if _conf.compat_loadstringMask ~= nil then
+	Screen:message("_conf.compat_loadstringMask is obsolete")
+end
 
 -- Test if HTTPS is working.
 if _conf.useLuaSec then
@@ -357,7 +360,7 @@ function love.update(dt)
 	
 	-- Messages
 	for i = 1, 10 do
-		if now - Screen.messages[i][2] > 5 and Screen.messages[i][3] == true then
+		if now - Screen.messages[i][2] > 4 and Screen.messages[i][3] == true then
 			Screen.messages[i][3] = false
 			Screen.dirty = true
 		end

@@ -80,7 +80,7 @@ Screen.tOffset["~"] = 0
 
 local msgTime = love.timer.getTime() + 5
 for i = 1,10 do
-	Screen.messages[i] = {"",msgTime,true}
+	Screen.messages[i] = {"",msgTime,false}
 end
 
 local COLOUR_FULL_WHITE = {255,255,255}
@@ -111,6 +111,7 @@ function Screen:message(message)
 		self.messages[i] = self.messages[i+1]
 	end
 	self.messages[10] = {message,love.timer.getTime(),true}
+	self.dirty = true
 end
 
 local function drawMessage(message,x,y)
@@ -166,7 +167,7 @@ function Screen:draw()
 	-- Render emulator elements
 	for i = 1,10 do
 		if self.messages[i][3] then
-			drawMessage(self.messages[i][1],_conf.terminal_guiScale, self.sHeight - (self.pixelHeight * (11 - i)))
+			drawMessage(self.messages[i][1],_conf.terminal_guiScale, self.sHeight - ((self.pixelHeight + _conf.terminal_guiScale) * (11 - i)) + _conf.terminal_guiScale)
 		end
 	end
 

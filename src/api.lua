@@ -54,6 +54,9 @@ if _conf.enableAPI_http == true then
 end
 
 local function FileReadHandle(path)
+	if not vfs.exists(path) then
+		return nil
+	end
 	local contents = {}
 	for line in vfs.lines(path) do
 		table.insert(contents, line)
@@ -91,6 +94,9 @@ local function FileReadHandle(path)
 end
 
 local function FileBinaryReadHandle(path)
+	if not vfs.exists(path) then
+		return nil
+	end
 	local closed = false
 	local File = vfs.newFile(path, "r")
 	if File == nil then return end
@@ -199,31 +205,23 @@ local function serialize(t)
 end
 
 api = {}
-if _conf.compat_loadstringMask == true then
-	function api.loadstring(str, source)
-		source = source or "string"
-		if type(str) ~= "string" and type(str) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
-		if type(source) ~= "string" and type(source) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
-		local f, err = loadstring(str, "=" .. source)
-		if f == nil then
-			-- Get the normal error message
-			local _, err = loadstring(str, source)
-			return f, err
-		end
-		setfenv(f, api.env)
+function api.loadstring(str, source)
+	source = source or "string"
+	if type(str) ~= "string" and type(str) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
+	if type(source) ~= "string" and type(source) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
+	source = tostring(source)
+	local sSS = source:sub(1,1)
+	if sSS == "@" or sSS == "=" then
+		source = source:sub(2)
+	end
+	local f, err = loadstring(str, "@" .. source)
+	if f == nil then
+		-- Get the normal error message
+		local _, err = loadstring(str, source)
 		return f, err
 	end
-else
-	function api.loadstring(str, source)
-		source = source or "string"
-		if type(str) ~= "string" and type(str) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
-		if type(source) ~= "string" and type(source) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
-		local f, err = loadstring(str, source)
-		if f then
-			setfenv(f, api.env)
-		end
-		return f, err
-	end
+	setfenv(f, api.env)
+	return f, err
 end
 
 api.term = {}
@@ -755,22 +753,13 @@ function api.fs.delete(path)
 end
 
 api.redstone = {}
-local function isval(val,...)
-	local canidates = {...}
-	for i = 1,#canidates do
-		if canidates[i] == val then
-			return true
-		end
-	end
-	return false
-end
 function api.redstone.getSides()
 	return {"top","bottom","left","right","front","back"}
 end
 function api.redstone.getInput(side)
 	if type(side) ~= "string" then
 		error("Expected string",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 	return false
@@ -778,14 +767,14 @@ end
 function api.redstone.setOutput(side, value)
 	if type(side) ~= "string" or type(value) ~= "boolean" then
 		error("Expected string, boolean",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 end
 function api.redstone.getOutput(side)
 	if type(side) ~= "string" then
 		error("Expected string",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 	return false
@@ -793,7 +782,7 @@ end
 function api.redstone.getAnalogInput(side)
 	if type(side) ~= "string" then
 		error("Expected string",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 	return 0
@@ -801,14 +790,14 @@ end
 function api.redstone.setAnalogOutput(side, strength)
 	if type(side) ~= "string" or type(strength) ~= "number" then
 		error("Expected string, number",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 end
 function api.redstone.getAnalogOutput(side)
 	if type(side) ~= "string" then
 		error("Expected string",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 	return 0
@@ -816,7 +805,7 @@ end
 function api.redstone.getBundledInput(side)
 	if type(side) ~= "string" then
 		error("Expected string",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 	return 0
@@ -824,7 +813,7 @@ end
 function api.redstone.getBundledOutput(sude)
 	if type(side) ~= "string" then
 		error("Expected string",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 	return 0
@@ -832,14 +821,14 @@ end
 function api.redstone.setBundledOutput(side, colors)
 	if type(side) ~= "string" or type(colors) ~= "number" then
 		error("Expected string, number",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 end
 function api.redstone.testBundledInput(side, color)
 	if type(side) ~= "string" or type(color) ~= "number" then
 		error("Expected string, number",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 	return color == 0
