@@ -7,8 +7,8 @@ function peripheral.printer()
 	local inkCount = 0
 	function obj.getType() return "printer" end
 	function obj.getMethods() return {"write","setCursorPos","getCursorPos","getPageSize","newPage","endPage","getInkLevel","setPageTitle","getPaperLevel"} end
-	function obj.call( sMethod, ... )
-		local tArgs = { ... }
+	function obj.call(sMethod, ...)
+		local tArgs = {...}
 		if sMethod == "write" then
 			local sMsg = unpack(tArgs)
 			if paper == false then error("Page not started",2) end
@@ -50,8 +50,8 @@ function peripheral.printer()
 			error("No such method " .. sMethod,2)
 		end
 	end
-	function obj.ccliteCall( sMethod, ... )
-		local tArgs = { ... }
+	function obj.ccliteCall(sMethod, ...)
+		local tArgs = {...}
 		if sMethod == "setPaperLevel" then
 			local nLevel = unpack(tArgs)
 			if type(nLevel) ~= "number" then error("Expected number",2) end

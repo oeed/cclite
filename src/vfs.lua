@@ -4,7 +4,7 @@
 local mountTable = {}
 vfs = {}
 function vfs.normalize(path)
-	path = "/" .. path
+	path = ("/" .. path):gsub("\\", "/")
 	local tPath = {}
 	for part in path:gmatch("[^/]+") do
    		if part ~= "" and part ~= "." then

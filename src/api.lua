@@ -125,12 +125,7 @@ local function FileWriteHandle(path, append)
 			File:write(data)
 		end,
 		flush = function()
-			if File.flush then
-				File:flush()
-			else
-				File:close()
-				File = vfs.newFile(path, "a")
-			end
+			File:flush()
 		end
 	}
 	return handle
@@ -148,15 +143,13 @@ local function FileBinaryWriteHandle(path, append)
 		write = function(data)
 			if closed then return end
 			if type(data) ~= "number" then return end
-			File:write(string.char(math.max(math.min(data,255),0)))
+			while data < 0 do
+				data = data + 256
+			end
+			File:write(string.char(data % 256))
 		end,
 		flush = function()
-			if File.flush then
-				File:flush()
-			else
-				File:close()
-				File = vfs.newFile(path, "a")
-			end
+			File:flush()
 		end
 	}
 	return handle
@@ -352,17 +345,17 @@ function api.term.scroll(n)
 end
 
 function tablecopy(orig)
-    local orig_type = type(orig)
-    local copy
-    if orig_type == 'table' then
-        copy = {}
-        for orig_key, orig_value in pairs(orig) do
-            copy[orig_key] = orig_value
-        end
-    else
-        copy = orig
-    end
-    return copy
+	local orig_type = type(orig)
+	local copy
+	if orig_type == 'table' then
+		copy = {}
+		for orig_key, orig_value in pairs(orig) do
+			copy[orig_key] = orig_value
+		end
+	else
+		copy = orig
+	end
+	return copy
 end
 
 api.cclite = {}
@@ -423,9 +416,9 @@ if _conf.enableAPI_http == true then
 		http.onReadyStateChange = function()
 			if http.status == 200 then
 				local handle = HTTPHandle(lines(http.responseText), http.status)
-				table.insert(Emulator.eventQueue, { "http_success", sUrl, handle })
+				table.insert(Emulator.eventQueue, {"http_success", sUrl, handle})
 			else
-				 table.insert(Emulator.eventQueue, { "http_failure", sUrl })
+				table.insert(Emulator.eventQueue, {"http_failure", sUrl})
 			end
 		end
 
@@ -441,7 +434,7 @@ function api.os.time()
 	return math.floor((os.clock()*0.02)%24*1000)/1000
 end
 function api.os.day()
-	return math.floor(os.clock()*0.2/60)
+	return math.floor(os.clock()/1200)
 end
 function api.os.setComputerLabel(label)
 	if type(label) ~= "string" and type(label) ~= "nil" then error("Expected string or nil",2) end
@@ -458,14 +451,9 @@ function api.os.startTimer(nTimeout)
 	if type(nTimeout) ~= "number" then error("Expected number",2) end
 	nTimeout = math.ceil(nTimeout*20)/20
 	if nTimeout < 0.05 then nTimeout = 0.05 end
-	local timer = {
-		expires = love.timer.getTime() + nTimeout,
-	}
-	table.insert(Emulator.actions.timers, timer)
-	for k, v in pairs(Emulator.actions.timers) do
-		if v == timer then return k end
-	end
-	return nil -- Error
+	Emulator.actions.lastTimer = Emulator.actions.lastTimer + 1
+	Emulator.actions.timers[Emulator.actions.lastTimer] = math.floor(love.timer.getTime()*20)/20 + nTimeout
+	return Emulator.actions.lastTimer
 end
 function api.os.setAlarm(nTime)
 	if type(nTime) ~= "number" then error("Expected number",2) end
@@ -474,12 +462,11 @@ function api.os.setAlarm(nTime)
 	end
 	local alarm = {
 		time = nTime,
+		day = api.os.day() + (nTime < api.os.time() and 1 or 0)
 	}
-	table.insert(Emulator.actions.alarms, alarm)
-	for k, v in pairs(Emulator.actions.alarms) do
-		if v == alarm then return k end
-	end
-	return nil -- Error
+	Emulator.actions.lastAlarm = Emulator.actions.lastAlarm + 1
+	Emulator.actions.alarms[Emulator.actions.lastAlarm] = alarm
+	return Emulator.actions.lastAlarm
 end
 function api.os.shutdown()
 	Emulator:stop(false)
@@ -1081,3 +1068,4 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 	api.env.string.gfind = nil
 	api.env._G = api.env
 end
+api.init()

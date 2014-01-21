@@ -1,5 +1,5 @@
 local ID = 1
-function peripheral.diskDrive( sSide )
+function peripheral.diskDrive(sSide)
 	-- DiskDrive is in progress, usage disabled
 	if true then return end
 	local obj = {}
@@ -7,8 +7,8 @@ function peripheral.diskDrive( sSide )
 	local side = sSide
 	function obj.getType() return "drive" end
 	function obj.getMethods() return {"isDiskPresent","getDiskLabel","setDiskLabel","hasData","getMountPath","hasAudio","getAudioTitle","playAudio","stopAudio","ejectDisk","getDiskID"} end
-	function obj.call( sMethod, ... )
-		local tArgs = { ... }
+	function obj.call(sMethod, ...)
+		local tArgs = {...}
 		if sMethod == "isDiskPresent" then
 			return content.type ~= ""
 		elseif sMethod == "getDiskLabel" then
@@ -39,8 +39,8 @@ function peripheral.diskDrive( sSide )
 			error("No such method " .. sMethod,2)
 		end
 	end
-	function obj.ccliteCall( sMethod, ... )
-		local tArgs = { ... }
+	function obj.ccliteCall(sMethod, ...)
+		local tArgs = {...}
 		if sMethod == "diskLoad" then
 			local sType, sLabel = unpack(tArgs)
 			if type(sType) ~= "string" then error("Expected string",2) end

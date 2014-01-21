@@ -51,8 +51,8 @@ keys = {
 
 -- Patch love.keyboard.isDown to make ctrl checking easier
 local olkiD = love.keyboard.isDown
-function love.keyboard.isDown( ... )
-	local keys = { ... }
+function love.keyboard.isDown(...)
+	local keys = {...}
 	if #keys == 1 and keys[1] == "ctrl" then
 		return olkiD("lctrl") or olkiD("rctrl")
 	else
@@ -71,6 +71,8 @@ Emulator = {
 		terminate = nil,
 		shutdown = nil,
 		reboot = nil,
+		lastTimer = 0,
+		lastAlarm = 0,
 		timers = {},
 		alarms = {},
 	},
@@ -102,14 +104,14 @@ function Emulator:start()
 		return
 	end
 
-	setfenv( fn, api.env )
+	setfenv(fn, api.env)
 
 	self.proc = coroutine.create(fn)
 	self.running = true
 	self:resume({})
 end
 
-function Emulator:stop( reboot )
+function Emulator:stop(reboot)
 	self.proc = nil
 	self.running = false
 	self.reboot = reboot
@@ -119,12 +121,14 @@ function Emulator:stop( reboot )
 	self.actions.terminate = nil
 	self.actions.shutdown = nil
 	self.actions.reboot = nil
+	self.actions.lastTimer = 0
+	self.actions.lastAlarm = 0
 	self.actions.timers = {}
 	self.actions.alarms = {}
 	self.eventQueue = {}
 end
 
-function Emulator:resume( ... )
+function Emulator:resume(...)
 	if not self.running then return end
 	debug.sethook(self.proc,function() error("Too long without yielding",2) end,"",1e9)
 	local ok, err = coroutine.resume(self.proc, ...)
@@ -134,9 +138,9 @@ function Emulator:resume( ... )
 		Emulator:stop()
 	end
 	if not ok then
-    	error(err,math.huge) -- Bios was unable to handle error, crash CCLite
-    end
-    return ok, err
+		error(err,math.huge) -- Bios was unable to handle error, crash CCLite
+	end
+	return ok, err
 end
 
 function love.load()
@@ -173,12 +177,12 @@ function love.load()
 		love.filesystem.createDirectory("data/") -- Make the user data folder
 	end
 
-	love.keyboard.setKeyRepeat( true )
+	love.keyboard.setKeyRepeat(true)
 
 	Emulator:start()
 end
 
-function love.mousereleased( x, y, _button )
+function love.mousereleased(x, y, _button)
 
 	if x > 0 and x < Screen.sWidth
 		and y > 0 and y < Screen.sHeight then -- Within screen bounds.
@@ -187,13 +191,13 @@ function love.mousereleased( x, y, _button )
 	end
 end
 
-function  love.mousepressed( x, y, _button )
+function  love.mousepressed(x, y, _button)
 
 	if x > 0 and x < Screen.sWidth
 		and y > 0 and y < Screen.sHeight then -- Within screen bounds.
 
-		local termMouseX = math_bind(math.floor( (x - _conf.terminal_guiScale) / Screen.pixelWidth ) + 1,1,_conf.terminal_width)
-    	local termMouseY = math_bind(math.floor( (y - _conf.terminal_guiScale) / Screen.pixelHeight ) + 1,1,_conf.terminal_height)
+		local termMouseX = math_bind(math.floor((x - _conf.terminal_guiScale) / Screen.pixelWidth) + 1,1,_conf.terminal_width)
+		local termMouseY = math_bind(math.floor((y - _conf.terminal_guiScale) / Screen.pixelHeight) + 1,1,_conf.terminal_height)
 
 		if not Emulator.mousePressed and _button == "r" or _button == "l" then
 			Emulator.mouse.isPressed = true
@@ -213,8 +217,8 @@ end
 
 function love.textinput(unicode)
    	if ChatAllowedCharacters[unicode:byte()] == true then
-    	table.insert(Emulator.eventQueue, {"char", unicode})
-    end
+		table.insert(Emulator.eventQueue, {"char", unicode})
+	end
 end
 
 function love.keypressed(key, isrepeat)
@@ -287,7 +291,7 @@ function love.update(dt)
 			Emulator:stop()
 		end)
 	updateShortcut("reboot",    "ctrl", "r", function()
-			Emulator:stop( true )
+			Emulator:stop(true)
 		end)
 
 	if api.comp.blink then
@@ -307,47 +311,41 @@ function love.update(dt)
 			Screen.dirty = true
 		end
 	end
-	
-	if #Emulator.actions.timers > 0 then
-		for k, v in pairs(Emulator.actions.timers) do
-			if now >= v.expires then
-				table.insert(Emulator.eventQueue, {"timer", k})
-				Emulator.actions.timers[k] = nil
-			end
+
+	for k, v in pairs(Emulator.actions.timers) do
+		if now >= v then
+			table.insert(Emulator.eventQueue, {"timer", k})
+			Emulator.actions.timers[k] = nil
 		end
 	end
 
-	if #Emulator.actions.alarms > 0 then
-		local currentTime = api.env.os.time()
-
-		for k, v in pairs(Emulator.actions.alarms) do
-        	if currentTime >= v.time then
-            	table.insert(Emulator.eventQueue, {"alarm", k})
-           		Emulator.actions.alarms[k] = nil
-        	end
-    	end
+	for k, v in pairs(Emulator.actions.alarms) do
+		if v.day <= api.os.day() and v.time <= api.env.os.time() then
+			table.insert(Emulator.eventQueue, {"alarm", k})
+			Emulator.actions.alarms[k] = nil
+		end
 	end
 
 	--MOUSE
 	if Emulator.mouse.isPressed then
-    	local mouseX     = love.mouse.getX()
-    	local mouseY     = love.mouse.getY()
-    	local termMouseX = math_bind(math.floor( (mouseX - _conf.terminal_guiScale) / Screen.pixelWidth ) + 1,1,_conf.terminal_width)
-    	local termMouseY = math_bind(math.floor( (mouseY - _conf.terminal_guiScale) / Screen.pixelHeight ) + 1,1,_conf.terminal_width)
-    	if (termMouseX ~= Emulator.mouse.lastTermX or termMouseY ~= Emulator.mouse.lastTermY)
+		local mouseX = love.mouse.getX()
+		local mouseY = love.mouse.getY()
+		local termMouseX = math_bind(math.floor((mouseX - _conf.terminal_guiScale) / Screen.pixelWidth) + 1, 1, _conf.terminal_width)
+		local termMouseY = math_bind(math.floor((mouseY - _conf.terminal_guiScale) / Screen.pixelHeight) + 1, 1, _conf.terminal_width)
+		if (termMouseX ~= Emulator.mouse.lastTermX or termMouseY ~= Emulator.mouse.lastTermY)
 			and (mouseX > 0 and mouseX < Screen.sWidth and
 				mouseY > 0 and mouseY < Screen.sHeight) then
 
-        	Emulator.mouse.lastTermX = termMouseX
-       		Emulator.mouse.lastTermY = termMouseY
+			Emulator.mouse.lastTermX = termMouseX
+			Emulator.mouse.lastTermY = termMouseY
 
-        	table.insert (Emulator.eventQueue, { "mouse_drag", love.mouse.isDown( "r" ) and 2 or 1, termMouseX, termMouseY})
-    	end
-    end
+			table.insert (Emulator.eventQueue, {"mouse_drag", love.mouse.isDown("r") and 2 or 1, termMouseX, termMouseY})
+		end
+	end
 
-    local currentClock = os.clock()
+	local currentClock = os.clock()
 
-    if #Emulator.eventQueue > 0 then
+	if #Emulator.eventQueue > 0 then
 		for k, v in pairs(Emulator.eventQueue) do
 			Emulator:resume(unpack(v))
 		end
@@ -366,7 +364,7 @@ function love.draw()
 			love.graphics.print("FPS: " .. tostring(Emulator.FPS), (Screen.sWidth) - (Screen.pixelWidth * 8) - 1, 10, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 		end
 	end
-	if _conf.lockfps > 0 then 
+	if _conf.lockfps > 0 and Emulator.running then 
 		local cur_time = love.timer.getTime()
 		if next_time <= cur_time then
 			next_time = cur_time
@@ -378,44 +376,42 @@ end
 
 -- Use a more assumptive and non automatic screen clearing version of love.run
 function love.run()
+	math.randomseed(os.time())
+	math.random() math.random()
 
-    math.randomseed(os.time())
-    math.random() math.random()
+	love.load(arg)
 
-    love.load(arg)
+	local dt = 0
 
-    local dt = 0
+	-- Main loop time.
+	while true do
+		-- Process events.
+		if love.event then
+			love.event.pump()
+			for e,a,b,c,d in love.event.poll() do
+				if e == "quit" then
+					if not love.quit or not love.quit() then
+						if love.audio then
+							love.audio.stop()
+						end
+						return
+					end
+				end
+				love.handlers[e](a,b,c,d)
+			end
+		end
 
-    -- Main loop time.
-    while true do
-        -- Process events.
-        if love.event then
-            love.event.pump()
-            for e,a,b,c,d in love.event.poll() do
-                if e == "quit" then
-                    if not love.quit or not love.quit() then
-                        if love.audio then
-                            love.audio.stop()
-                        end
-                        return
-                    end
-                end
-                love.handlers[e](a,b,c,d)
-            end
-        end
+		-- Update dt, as we'll be passing it to update
+		love.timer.step()
+		dt = love.timer.getDelta()
 
-        -- Update dt, as we'll be passing it to update
-        love.timer.step()
-        dt = love.timer.getDelta()
-
-        -- Call update and draw
-        love.update(dt) -- will pass 0 if love.timer is disabled
+		-- Call update and draw
+		love.update(dt) -- will pass 0 if love.timer is disabled
 		if not love.window.isVisible() then Screen.dirty = false end
-        love.draw()
+		love.draw()
 
-        if love.timer then love.timer.sleep(0.001) end
+		if love.timer then love.timer.sleep(0.001) end
 		if Screen.dirty then love.graphics.present() end
 		Screen.dirty = false
-    end
-
+	end
 end
