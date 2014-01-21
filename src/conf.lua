@@ -13,21 +13,24 @@ _conf = {
 	
 	-- The GUI scale of Computer screens
 	terminal_guiScale = 2,
-
+	
 	-- Enable display of emulator FPS
 	cclite_showFPS = true,
 	
 	-- The FPS to lock CCLite to
-	lockfps = 40,
+	lockfps = 20,
 	
 	-- Enable emulation of buggy Clipboard handling
 	compat_faultyClip = true,
 	
-	-- Enable usage of Carrage Return for fs.writeLine
-	useCRLF = false,
-	
 	-- Mask [string "source"] from loadstring
 	compat_loadstringMask = true,
+	
+	-- Enable https connections through luasec
+	useLuaSec = false,
+	
+	-- Enable usage of Carrage Return for fs.writeLine
+	useCRLF = false,
 	
 	-- Max number of messages to have in the uplink channnel
 	-- Increase this value at cost of render performance.

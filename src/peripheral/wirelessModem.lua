@@ -3,8 +3,8 @@ function peripheral.wirelessModem()
 	local channels = {}
 	function obj.getType() return "modem" end
 	function obj.getMethods() return {"isOpen", "open", "close", "closeAll", "transmit", "isWireless"} end
-	function obj.call( sMethod, ... )
-		local tArgs = { ... }
+	function obj.call(sMethod, ...)
+		local tArgs = {...}
 		if sMethod == "isOpen" then
 			local nChannel = unpack(tArgs)
 			if type(nChannel) ~= "number" then error("Expected number",2) end

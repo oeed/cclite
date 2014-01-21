@@ -3,8 +3,8 @@ function peripheral.commandBlock()
 	local cmd = ""
 	function obj.getType() return "command" end
 	function obj.getMethods() return {"getCommand", "setCommand", "runCommand"} end
-	function obj.call( sMethod, ... )
-		local tArgs = { ... }
+	function obj.call(sMethod, ...)
+		local tArgs = {...}
 		if sMethod == "getCommand" then
 			return cmd
 		elseif sMethod == "setCommand" then

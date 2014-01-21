@@ -5,8 +5,8 @@ function peripheral.wiredModem()
 	local channels = {}
 	function obj.getType() return "modem" end
 	function obj.getMethods() return {"open","isOpen","close","closeAll","transmit","isWireless","getNamesRemote","isPresentRemote","getTypeRemote","getMethodsRemote","callRemote"} end
-	function obj.call( sMethod, ... )
-		local tArgs = { ... }
+	function obj.call(sMethod, ...)
+		local tArgs = {...}
 		if sMethod == "open" then
 			local nChannel = unpack(tArgs)
 			if type(nChannel) ~= "number" then error("Expected number",2) end
@@ -65,8 +65,8 @@ function peripheral.wiredModem()
 			error("No such method " .. sMethod,2)
 		end
 	end
-	function obj.ccliteCall( sMethod, ... )
-		local tArgs = { ... }
+	function obj.ccliteCall(sMethod, ...)
+		local tArgs = {...}
 		if sMethod == "peripheralAttach" then
 			local sType = unpack(tArgs)
 			if type(sType) ~= "string" then

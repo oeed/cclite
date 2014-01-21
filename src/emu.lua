@@ -96,6 +96,8 @@ Emulator = {
 	killself = 0,
 	actions = { -- Keyboard commands i.e. ctrl + s and timers/alarms
 		terminate = nil,
+		lastTimer = 0,
+		lastAlarm = 0,
 		timers = {},
 		alarms = {},
 	},
@@ -139,6 +141,8 @@ function Emulator:stop( reboot )
 
 	-- Reset events/key shortcuts
 	self.actions.terminate = nil
+	self.actions.lastTimer = 0
+	self.actions.lastAlarm = 0
 	self.actions.timers = {}
 	self.actions.alarms = {}
 	self.eventQueue = {}
@@ -223,8 +227,7 @@ function love.mousepressed(x, y, _button)
 end
 
 function love.textinput(unicode)
-	local byte = string.byte(unicode)
-   	if ChatAllowedCharacters[byte] == true then
+   	if ChatAllowedCharacters[unicode:byte()] == true then
     	table.insert(Emulator.eventQueue, {"char", unicode})
     end
 end
@@ -241,7 +244,7 @@ function love.keypressed(key, isrepeat)
 		if nloc > 0 then
 			cliptext = cliptext:sub(1, nloc - (_conf.compat_faultyClip == true and 2 or 1))
 		end
-		cliptext = cliptext:sub(1,128)
+		cliptext = cliptext:sub(1,127)
 		for i = 1,#cliptext do
 			love.textinput(cliptext:sub(i,i))
 		end
@@ -274,24 +277,18 @@ function love.update(dt)
 			table.insert(Emulator.eventQueue, {"terminate"})
 		end)
 	
-	if #Emulator.actions.timers > 0 then
-		for k, v in pairs(Emulator.actions.timers) do
-			if now >= v.expires then
-				table.insert(Emulator.eventQueue, {"timer", k})
-				Emulator.actions.timers[k] = nil
-			end
+	for k, v in pairs(Emulator.actions.timers) do
+		if now >= v then
+			table.insert(Emulator.eventQueue, {"timer", k})
+			Emulator.actions.timers[k] = nil
 		end
 	end
 
-	if #Emulator.actions.alarms > 0 then
-		local currentTime = api.env.os.time()
-
-		for k, v in pairs(Emulator.actions.alarms) do
-        	if currentTime >= v.time then
-            	table.insert(Emulator.eventQueue, {"alarm", k})
-           		Emulator.actions.alarms[k] = nil
-        	end
-    	end
+	for k, v in pairs(Emulator.actions.alarms) do
+		if v.day <= api.os.day() and v.time <= api.env.os.time() then
+			table.insert(Emulator.eventQueue, {"alarm", k})
+			Emulator.actions.alarms[k] = nil
+		end
 	end
 
 	--MOUSE

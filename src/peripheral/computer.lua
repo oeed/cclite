@@ -1,11 +1,11 @@
 local ID = 1
-local function baseobj( sType )
+local function baseobj(sType)
 	local obj = {}
 	local myID = ID
 	ID = ID + 1
 	function obj.getType() return sType end
 	function obj.getMethods() return {"turnOn", "shutdown", "reboot", "getID"} end
-	function obj.call( sMethod )
+	function obj.call(sMethod)
 		if sMethod == "turnOn" then
 		elseif sMethod == "shutdown" then
 		elseif sMethod == "reboot" then

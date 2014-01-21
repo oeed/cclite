@@ -52,23 +52,34 @@ Screen = {
 	lastCursor = nil,
 	dirty = true,
 	tOffset = {},
+	setup = false,
 }
 function Screen:init()
-	for y = 1, self.height do
-		self.textB[y] = {}
-		self.backgroundColourB[y] = {}
-		self.textColourB[y] = {}
-		for x = 1, self.width do
-			self.textB[y][x] = " "
-			self.backgroundColourB[y][x] = 32768
-			self.textColourB[y][x] = 1
+	if self.setup == false then
+		for y = 1, self.height do
+			self.textB[y] = {}
+			self.backgroundColourB[y] = {}
+			self.textColourB[y] = {}
+			for x = 1, self.width do
+				self.textB[y][x] = " "
+				self.backgroundColourB[y][x] = 32768
+				self.textColourB[y][x] = 1
+			end
+		end
+
+		self.font = love.graphics.getFont()
+		for i = 32,126 do self.tOffset[string.char(i)] = math.floor(3 - self.font:getWidth(string.char(i)) / 2) * _conf.terminal_guiScale end
+		self.tOffset["@"] = 0
+		self.tOffset["~"] = 0
+		self.setup = true
+	else
+		for y = 1, self.height do
+			for x = 1, self.width do
+				self.textB[y][x] = " "
+				self.backgroundColourB[y][x] = 32768
+			end
 		end
 	end
-
-	self.font = love.graphics.getFont()
-	for i = 32,126 do self.tOffset[string.char(i)] = math.floor(3 - self.font:getWidth(string.char(i)) / 2) * _conf.terminal_guiScale end
-	self.tOffset["@"] = 0
-	self.tOffset["~"] = 0
 	self.dirty = true
 end
 
@@ -100,11 +111,11 @@ function Screen:draw()
 	-- Should only update sections that changed.
 
 	-- Render the Background Color
-	setColor( COLOUR_CODE[ self.backgroundColourB[1][1] ], true )
+	setColor(COLOUR_CODE[self.backgroundColourB[1][1]], true)
 	for y = 0, decHeight do
 		for x = 0, decWidth do
 
-			setColor( COLOUR_CODE[ self.backgroundColourB[y + 1][x + 1] ] ) -- TODO COLOUR_CODE lookup might be too slow?
+			setColor(COLOUR_CODE[self.backgroundColourB[y + 1][x + 1]]) -- TODO COLOUR_CODE lookup might be too slow?
 			ldrawRect("fill", x * self.pixelWidth + (x == 0 and 0 or _conf.terminal_guiScale), y * self.pixelHeight + (y == 0 and 0 or _conf.terminal_guiScale), self.pixelWidth + ((x == 0 or x == decWidth) and _conf.terminal_guiScale or 0), self.pixelHeight + ((y == 0 or y == decHeight) and _conf.terminal_guiScale or 0))
 
 		end
@@ -121,14 +132,14 @@ function Screen:draw()
 				elseif sByte < 32 or sByte > 126 or sByte == 96 then
 					text = "?"
 				end
-				setColor( COLOUR_CODE[ self.textColourB[y + 1][x + 1] ] )
-				lprint( text, x * self.pixelWidth + tOffset[text] + _conf.terminal_guiScale, y * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
+				setColor(COLOUR_CODE[self.textColourB[y + 1][x + 1]])
+				lprint(text, x * self.pixelWidth + tOffset[text] + _conf.terminal_guiScale, y * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 			end
 		end
 	end
 
 	if api.comp.blink and self.showCursor then
-		setColor(COLOUR_CODE[ api.comp.fg ])
+		setColor(COLOUR_CODE[api.comp.fg])
 		lprint("_", (api.comp.cursorX - 1) * self.pixelWidth + tOffset["_"] + _conf.terminal_guiScale, (api.comp.cursorY - 1) * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 	end
 end

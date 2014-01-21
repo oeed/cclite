@@ -45,7 +45,7 @@ function api.term.setCursorPos(x, y)
 end
 function api.term.write(text)
 	for i = 1, #text do
-		local char = string.sub(text, i, i)
+		local char = text:sub(i, i)
 		if api.comp.cursorX + i - 1 <= Screen.width
 			and api.comp.cursorX + i - 1 >= 1 then
 			Screen.textB[api.comp.cursorY][api.comp.cursorX + i - 1] = char
@@ -193,6 +193,8 @@ function love.load()
 	love.graphics.setFont(font)
 	
 	love.keyboard.setKeyRepeat(true)
+	
+	Screen:init() -- Prevent a race condition
 	
 	Emulator:start()
 	

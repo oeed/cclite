@@ -145,12 +145,7 @@ local function FileWriteHandle(path, append)
 			File:write(data)
 		end,
 		flush = function()
-			if File.flush then
-				File:flush()
-			else
-				File:close()
-				File = vfs.newFile(path, "a")
-			end
+			File:flush()
 		end
 	}
 	return handle
@@ -168,15 +163,13 @@ local function FileBinaryWriteHandle(path, append)
 		write = function(data)
 			if closed then return end
 			if type(data) ~= "number" then return end
-			File:write(string.char(math.max(math.min(data,255),0)))
+			while data < 0 do
+				data = data + 256
+			end
+			File:write(string.char(data % 256))
 		end,
 		flush = function()
-			if File.flush then
-				File:flush()
-			else
-				File:close()
-				File = vfs.newFile(path, "a")
-			end
+			File:flush()
 		end
 	}
 	return handle
@@ -239,23 +232,13 @@ if _conf.compat_loadstringMask == true then
 		source = source or "string"
 		if type(str) ~= "string" and type(str) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
 		if type(source) ~= "string" and type(source) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
-		source = tostring(source)
-		local file = love.filesystem.newFile(source,"w")
-		file:write(str)
-		file:close()
-		local stat, f, err = pcall(function() return love.filesystem.load(source) end)
-		love.filesystem.remove(source)
-		if not stat then
-			-- Fall back to old method.
-			local f, err = loadstring(str, source)
-			if f then
-				setfenv(f, api.env)
-			end
+		local f, err = loadstring(str, "=" .. source)
+		if f == nil then
+			-- Get the normal error message
+			local _, err = loadstring(str, source)
 			return f, err
 		end
-		if f then
-			setfenv(f, api.env)
-		end
+		setfenv(f, api.env)
 		return f, err
 	end
 else
@@ -324,17 +307,17 @@ function api.term.scroll(n)
 end
 
 function tablecopy(orig)
-    local orig_type = type(orig)
-    local copy
-    if orig_type == 'table' then
-        copy = {}
-        for orig_key, orig_value in pairs(orig) do
-            copy[orig_key] = orig_value
-        end
-    else
-        copy = orig
-    end
-    return copy
+	local orig_type = type(orig)
+	local copy
+	if orig_type == 'table' then
+		copy = {}
+		for orig_key, orig_value in pairs(orig) do
+			copy[orig_key] = orig_value
+		end
+	else
+		copy = orig
+	end
+	return copy
 end
 
 api.cclite = {}
@@ -379,6 +362,9 @@ if _conf.enableAPI_http == true then
 		if type(sUrl) ~= "string" then
 			error("String expected" .. (sUrl == nil and ", got nil" or ""),2)
 		end
+		if sUrl:sub(1,5) ~= "http:" and sUrl:sub(1,6) ~= "https:" then
+			error("Invalid URL",2)
+		end
 		local http = HttpRequest.new()
 		local method = sParams and "POST" or "GET"
 
@@ -392,9 +378,9 @@ if _conf.enableAPI_http == true then
 		http.onReadyStateChange = function()
 			if http.status == 200 then
 				local handle = HTTPHandle(lines(http.responseText), http.status)
-				table.insert(Emulator.eventQueue, { "http_success", sUrl, handle })
+				table.insert(Emulator.eventQueue, {"http_success", sUrl, handle})
 			else
-				 table.insert(Emulator.eventQueue, { "http_failure", sUrl })
+				table.insert(Emulator.eventQueue, {"http_failure", sUrl})
 			end
 		end
 
@@ -404,13 +390,13 @@ end
 
 api.os = {}
 function api.os.clock()
-	return math.floor(os.clock()*20)/20
+	return math.floor(os.clock()*20)/20 - api.comp.startTime
 end
 function api.os.time()
 	return math.floor((os.clock()*0.02)%24*1000)/1000
 end
 function api.os.day()
-	return math.floor(os.clock()*0.2/60)
+	return math.floor(os.clock()/1200)
 end
 function api.os.setComputerLabel(label)
 	if type(label) ~= "string" and type(label) ~= "nil" then error("Expected string or nil",2) end
@@ -419,23 +405,17 @@ end
 function api.os.getComputerLabel()
 	return api.comp.label
 end
-function api.os.queueEvent(...)
-	local event = { ... }
-	if type(event[1]) ~= "string" then error("Expected string",2) end
-	table.insert(Emulator.eventQueue, event)
+function api.os.queueEvent(event, ...)
+	if type(event) ~= "string" then error("Expected string",2) end
+	table.insert(Emulator.eventQueue, {event, ...})
 end
 function api.os.startTimer(nTimeout)
 	if type(nTimeout) ~= "number" then error("Expected number",2) end
 	nTimeout = math.ceil(nTimeout*20)/20
 	if nTimeout < 0.05 then nTimeout = 0.05 end
-	local timer = {
-		expires = love.timer.getTime() + nTimeout,
-	}
-	table.insert(Emulator.actions.timers, timer)
-	for k, v in pairs(Emulator.actions.timers) do
-		if v == timer then return k end
-	end
-	return nil -- Error
+	Emulator.actions.lastTimer = Emulator.actions.lastTimer + 1
+	Emulator.actions.timers[Emulator.actions.lastTimer] = math.floor(love.timer.getTime()*20)/20 + nTimeout
+	return Emulator.actions.lastTimer
 end
 function api.os.setAlarm(nTime)
 	if type(nTime) ~= "number" then error("Expected number",2) end
@@ -444,12 +424,11 @@ function api.os.setAlarm(nTime)
 	end
 	local alarm = {
 		time = nTime,
+		day = api.os.day() + (nTime < api.os.time() and 1 or 0)
 	}
-	table.insert(Emulator.actions.alarms, alarm)
-	for k, v in pairs(Emulator.actions.alarms) do
-		if v == alarm then return k end
-	end
-	return nil -- Error
+	Emulator.actions.lastAlarm = Emulator.actions.lastAlarm + 1
+	Emulator.actions.alarms[Emulator.actions.lastAlarm] = alarm
+	return Emulator.actions.lastAlarm
 end
 function api.os.shutdown()
 	Emulator.killself = 1
@@ -480,8 +459,7 @@ function api.peripheral.getMethods(sSide)
 	return
 end
 function api.peripheral.call(sSide, sMethod, ...)
-	if type(sSide) ~= "string" then error("Expected string",2) end
-	if type(sMethod) ~= "string" then error("Expected string, string",2) end
+	if type(sSide) ~= "string" or type(sMethod) ~= "string" then error("Expected string, string",2) end
 	if not api.cclite.peripherals[sSide] then error("No peripheral attached",2) end
 	return api.cclite.peripherals[sSide].call(sMethod, ...)
 end
@@ -498,18 +476,44 @@ function api.fs.combine(basePath, localPath)
 	if type(basePath) ~= "string" or type(localPath) ~= "string" then
 		error("Expected string, string",2)
 	end
-	local path = "/" .. basePath .. "/" .. localPath
+	local path = ("/" .. basePath .. "/" .. localPath):gsub("\\", "/")
+	
+	local cleanName = ""
+	for i = 1,#path do
+		local c = path:sub(i,i):byte()
+		if c >= 32 and c ~= 34 and c ~= 42 and c ~= 58 and c ~= 60 and c ~= 62 and c ~= 63 and c ~= 124 then
+			cleanName = cleanName .. string.char(c)
+		end
+	end
+	
 	local tPath = {}
-	for part in path:gmatch("[^/]+") do
+	for part in cleanName:gmatch("[^/]+") do
    		if part ~= "" and part ~= "." then
-   			if part == ".." and #tPath > 0 then
+   			if part == ".." and #tPath > 0 and tPath[1] ~= ".." then
    				table.remove(tPath)
    			else
-   				table.insert(tPath, part)
+   				table.insert(tPath, part:sub(1,255))
    			end
    		end
 	end
 	return table.concat(tPath, "/")
+end
+
+local function contains(pathA, pathB)
+	pathA = api.fs.combine(pathA,"")
+	pathB = api.fs.combine(pathB,"")
+
+	if pathB == ".." then
+		return false
+	elseif pathB:sub(1,3) == "../" then
+		return false
+	elseif pathB == pathA then
+		return true
+	elseif #pathA == 0 then
+		return true
+	else
+		return pathB:sub(1,#pathA+1) == pathA .. "/"
+	end
 end
 
 function api.fs.open(path, mode)
@@ -538,6 +542,9 @@ function api.fs.list(path)
 	local testpath = api.fs.combine("data/", path)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	path = vfs.normalize(path)
+	if not vfs.exists(path) or not vfs.isDirectory(path) then
+		error("Not a directory",2)
+	end
 	return vfs.getDirectoryItems(path)
 end
 function api.fs.exists(path)
@@ -563,11 +570,15 @@ function api.fs.isReadOnly(path)
 		error("Expected string",2)
 	end
 	path = vfs.normalize(path)
-	return path == "/rom" or path:sub(1, 5) == "/rom/" or vfs.isMountPath(path)
+	return path == "/rom" or path:sub(1, 5) == "/rom/"
 end
 function api.fs.getName(path)
 	if type(path) ~= "string" then
 		error("Expected string",2)
+	end
+	path = vfs.normalize(path)
+	if path == "/" then
+		return "root"
 	end
 	local fpath, name, ext = path:match("(.-)([^\\/]-%.?([^%.\\/]*))$")
 	return name
@@ -584,15 +595,22 @@ function api.fs.getSize(path)
 	end
 
 	if vfs.isDirectory(path) then
-		return 512
+		return 0
 	end
 	
 	local size = vfs.getSize(path)
-	if size == 0 then size = 512 end
 	return math.ceil(size/512)*512
 end
 
 function api.fs.getFreeSpace(path)
+	if type(path) ~= "string" then
+		error("Expected string",2)
+	end
+	local testpath = api.fs.combine("data/", path)
+	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
+	if path == "/rom" or path:sub(1, 5) == "/rom/" then
+		return 0
+	end
 	return math.huge
 end
 
@@ -606,7 +624,10 @@ function api.fs.makeDir(path) -- All write functions are within data/
 	if path == "/rom" or path:sub(1, 5) == "/rom/" then
 		error("Access Denied",2)
 	end
-	return vfs.createDirectory(path)
+	if vfs.exists(path) and not vfs.isDirectory(path) then
+		error("File exists",2)
+	end
+	vfs.createDirectory(path)
 end
 
 local function deltree(sFolder)
@@ -658,15 +679,18 @@ function api.fs.move(fromPath, toPath)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	fromPath = vfs.normalize(fromPath)
 	toPath = vfs.normalize(toPath)
+	if fromPath == "/rom" or fromPath:sub(1, 5) == "/rom/" or 
+		toPath == "/rom" or toPath:sub(1, 5) == "/rom/" then
+		error("Access Denied",2)
+	end
 	if vfs.exists(fromPath) ~= true then
 		error("No such file",2)
 	end
 	if vfs.exists(toPath) == true then
 		error("File exists",2)
 	end
-	if fromPath == "/rom" or fromPath:sub(1, 5) == "/rom/" or 
-		toPath == "/rom" or toPath:sub(1, 5) == "/rom/" then
-		error("Access Deined",2)
+	if contains(fromPath, toPath) then
+		error("Can't move a directory inside itself",2)
 	end
 	copytree(fromPath, toPath)
 	deltree(fromPath)
@@ -682,14 +706,17 @@ function api.fs.copy(fromPath, toPath)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	fromPath = vfs.normalize(fromPath)
 	toPath = vfs.normalize(toPath)
+	if toPath == "/rom" or toPath:sub(1, 5) == "/rom/" then
+		error("Access Denied",2)
+	end
 	if vfs.exists(fromPath) ~= true then
 		error("No such file",2)
 	end
 	if vfs.exists(toPath) == true then
 		error("File exists",2)
 	end
-	if toPath == "/rom" or toPath:sub(1, 5) == "/rom/" then
-		error("Access Deined",2)
+	if contains(fromPath, toPath) then
+		error("Can't copy a directory inside itself",2)
 	end
 	copytree(fromPath, toPath)
 end
@@ -699,10 +726,101 @@ function api.fs.delete(path)
 	local testpath = api.fs.combine("data/", path)
 	if testpath:sub(1,5) ~= "data/" and testpath ~= "data" then error("Invalid Path",2) end
 	path = vfs.normalize(path)
-	if path == "/rom" or path:sub(1, 5) == "/rom/" then
-		error("Access Deined",2)
+	if path == "/rom" or path:sub(1, 5) == "/rom/" or vfs.isMountPath(path) then
+		error("Access Denied",2)
 	end
 	deltree(path)
+end
+
+api.redstone = {}
+local function isval(val,...)
+	local canidates = {...}
+	for i = 1,#canidates do
+		if canidates[i] == val then
+			return true
+		end
+	end
+	return false
+end
+function api.redstone.getSides()
+	return {"top","bottom","left","right","front","back"}
+end
+function api.redstone.getInput(side)
+	if type(side) ~= "string" then
+		error("Expected string",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+	return false
+end
+function api.redstone.setOutput(side, value)
+	if type(side) ~= "string" or type(value) ~= "boolean" then
+		error("Expected string, boolean",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+end
+function api.redstone.getOutput(side)
+	if type(side) ~= "string" then
+		error("Expected string",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+	return false
+end
+function api.redstone.getAnalogInput(side)
+	if type(side) ~= "string" then
+		error("Expected string",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+	return 0
+end
+function api.redstone.setAnalogOutput(side, strength)
+	if type(side) ~= "string" or type(strength) ~= "number" then
+		error("Expected string, number",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+end
+function api.redstone.getAnalogOutput(side)
+	if type(side) ~= "string" then
+		error("Expected string",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+	return 0
+end
+function api.redstone.getBundledInput(side)
+	if type(side) ~= "string" then
+		error("Expected string",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+	return 0
+end
+function api.redstone.getBundledOutput(sude)
+	if type(side) ~= "string" then
+		error("Expected string",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+	return 0
+end
+function api.redstone.setBundledOutput(side, colors)
+	if type(side) ~= "string" or type(colors) ~= "number" then
+		error("Expected string, number",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+end
+function api.redstone.testBundledInput(side, color)
+	if type(side) ~= "string" or type(color) ~= "number" then
+		error("Expected string, number",2)
+	elseif not isval(side,"top","bottom","left","right","front","back") then
+		error("Invalid side.",2)
+	end
+	return color == 0
 end
 
 api.bit = {}
@@ -711,24 +829,59 @@ function api.bit.norm(val)
 	return val
 end
 function api.bit.blshift(n, bits)
+	if (type(n) ~= "number" and type(n) ~= "nil") or (type(bits) ~= "number" and type(bits) ~= "nil") then
+		error("number expected",2)
+	elseif n == nil or bits == nil then
+		error("too few arguments",2)
+	end
 	return api.bit.norm(bit.lshift(n, bits))
 end
 function api.bit.brshift(n, bits)
+	if (type(n) ~= "number" and type(n) ~= "nil") or (type(bits) ~= "number" and type(bits) ~= "nil") then
+		error("number expected",2)
+	elseif n == nil or bits == nil then
+		error("too few arguments",2)
+	end
 	return api.bit.norm(bit.arshift(n, bits))
 end
 function api.bit.blogic_rshift(n, bits)
+	if (type(n) ~= "number" and type(n) ~= "nil") or (type(bits) ~= "number" and type(bits) ~= "nil") then
+		error("number expected",2)
+	elseif n == nil or bits == nil then
+		error("too few arguments",2)
+	end
 	return api.bit.norm(bit.rshift(n, bits))
 end
 function api.bit.bxor(m, n)
+	if (type(m) ~= "number" and type(m) ~= "nil") or (type(n) ~= "number" and type(n) ~= "nil") then
+		error("number expected",2)
+	elseif m == nil or n == nil then
+		error("too few arguments",2)
+	end
 	return api.bit.norm(bit.bxor(m, n))
 end
 function api.bit.bor(m, n)
+	if (type(m) ~= "number" and type(m) ~= "nil") or (type(n) ~= "number" and type(n) ~= "nil") then
+		error("number expected",2)
+	elseif m == nil or n == nil then
+		error("too few arguments",2)
+	end
 	return api.bit.norm(bit.bor(m, n))
 end
 function api.bit.band(m, n)
+	if (type(m) ~= "number" and type(m) ~= "nil") or (type(n) ~= "number" and type(n) ~= "nil") then
+		error("number expected",2)
+	elseif m == nil or n == nil then
+		error("too few arguments",2)
+	end
 	return api.bit.norm(bit.band(m, n))
 end
 function api.bit.bnot(n)
+	if type(n) ~= "number" and type(n) ~= "nil" then
+		error("number expected",2)
+	elseif n == nil then
+		error("too few arguments",2)
+	end
 	return api.bit.norm(bit.bnot(n))
 end
 
@@ -740,6 +893,7 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 		fg = 1,
 		blink = false,
 		label = nil,
+		startTime = math.floor(os.clock()*20)/20
 	}
 	api.env = {
 		_VERSION = "Luaj-jse 2.0.3",
@@ -839,17 +993,17 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 			getNames = api.peripheral.getNames,
 		},
 		redstone = {
-			getSides = function() return {"top","bottom","left","right","front","back"} end,
-			getInput = function() end,
-			getOutput = function() end,
-			getBundledInput = function() end,
-			getBundledOutput = function() end,
-			getAnalogInput = function() end,
-			getAnalogOutput = function() end,
-			setOutput = function() end,
-			setBundledOutput = function() end,
-			setAnalogOutput = function() end,
-			testBundledInput = function() end,
+			getSides = api.redstone.getSides,
+			getInput = api.redstone.getInput,
+			getOutput = api.redstone.getOutput,
+			getBundledInput = api.redstone.getBundledInput,
+			getBundledOutput = api.redstone.getBundledOutput,
+			getAnalogInput = api.redstone.getAnalogInput,
+			getAnalogOutput = api.redstone.getAnalogOutput,
+			setOutput = api.redstone.setOutput,
+			setBundledOutput = api.redstone.setBundledOutput,
+			setAnalogOutput = api.redstone.setAnalogOutput,
+			testBundledInput = api.redstone.testBundledInput,
 		},
 		bit = {
 			blshift = api.bit.blshift,
@@ -883,3 +1037,4 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 	api.env.string.gfind = nil
 	api.env._G = api.env
 end
+api.init()

@@ -1,103 +1,119 @@
 HttpRequest = {}
+HttpRequest.threads = {}
 HttpRequest.activeRequests = {}
 
+local function newThread()
+
+end
+
 function HttpRequest.new()
-    local self = {}
+	local self = {}
 
-    local httpRequest       = require("socket.http")
-    local httpMime          = require("mime")
-    local httpUrl           = require("socket.url")
-    local httpParams        = {}
-    httpParams.headers      = {}
+	local httpParams = {}
+	httpParams.headers = {}
 
-    local ltn12             = require("ltn12")
+	self.onReadyStateChange = function() end
+	self.responseText = ""
 
-    self.requestThread      = nil
-    self.requestChannel     = nil
+	-- Locate or create a free thread
+	local foundThread = false
+	for i = 1,#HttpRequest.threads do
+		if HttpRequest.threads[i].status == 0 then
+			self.threadObj = HttpRequest.threads[i]
+			self.threadObj.status = 1
+			foundThread = true
+			break
+		end
+	end
+	if foundThread == false then
+		self.threadObj = {}
+		self.threadObj.thread = love.thread.newThread("http/HttpRequest_thread.lua")
+		self.threadObj.channel = love.thread.newChannel()
+		self.threadObj.thread:start(self.threadObj.channel,_conf.useLuaSec)
+		self.threadObj.status = 1
+		table.insert(HttpRequest.threads,self.threadObj)
+	end
 
-    self.onreadystatechange = function() end
-    self.readyState         = 0
+	self.open = function(pMethod, pUrl)
+		httpParams.method = pMethod or "GET"
+		httpParams.url = pUrl
+	end
+	---------------------------------------------------------------------
+	self.send = function(pString)
+		httpParams.body = pString or ""
+		
+		self.threadObj.channel:supply(TSerial.pack(httpParams))
+		self.threadObj.status = 2
+	end
+	---------------------------------------------------------------------
+	self.setRequestHeader = function(pName, pValue)
+		httpParams.headers[pName] = pValue
+	end
+	---------------------------------------------------------------------
+	self.checkRequest = function()
+		-- Look for async thread response message
+		if self.threadObj.channel and self.threadObj.channel:getCount() > 0 then
+			-- Unpack message
+			result = TSerial.unpack(self.threadObj.channel:pop())
 
-    self.responseText       = ""
-    self.responseXML        = nil
+			self.threadObj.channel:clear()
 
-    self.status             = nil
-    self.statusText         = nil
+			-- Set status
+			self.status = result[2]
+			-- Set responseText
+			self.responseText = result[5]
 
-    self.timeout            = 21
+			-- Remove request from activeRequests
+			for i = 1, #HttpRequest.activeRequests do
+				if HttpRequest.activeRequests[i] == self then
+					table.remove(HttpRequest.activeRequests, i)
+					break
+				end
+			end
 
+			-- Mark thread as avaliable again
+			self.threadObj.status = 0
+			
+			-- Finally call onReadyStateChange callback
+			self.onReadyStateChange()
+		end
 
-    self.abort = function()
-    end
-    self.getAllResponseHeaders = function()
-    end
-    self.getResponseHeader = function()
-    end
-    self.open = function(pMethod, pUrl)
-        httpParams.method   = pMethod or "GET"
-        httpParams.url      = pUrl
-    end
-    ---------------------------------------------------------------------
-    self.send = function(pString)
-        httpParams.body = pString or ""
+		if self.threadObj.thread:isRunning() == false then
+			print(self.threadObj.thread:getError())
 
-        self.requestThread = love.thread.newThread("http/HttpRequest_thread.lua")
-        self.requestChannel = love.thread.newChannel()
+			-- Remove request from activeRequests
+			for i = 1, #HttpRequest.activeRequests do
+				if HttpRequest.activeRequests[i] == self then
+					table.remove(HttpRequest.activeRequests, i)
+					break
+				end
+			end
+			
+			-- Remove dead thread from avaliable threads
+			for i = 1, #HttpRequest.threads do
+				if HttpRequest.threads[i] == self.threadObj then
+					table.remove(HttpRequest.threads, i)
+					break
+				end
+			end
+			
+			-- Finally call onReadyStateChange callback
+			self.onReadyStateChange()
+		end
+	end
+	---------------------------------------------------------------------
 
-        self.requestThread:start(self.requestChannel, _DEBUG)
-        self.requestChannel:supply({
-            tostring(self.timeout),
-            TSerial.pack(httpParams)
-        })
-    end
-    ---------------------------------------------------------------------
-    self.setRequestHeader = function(pName, pValue)
-        httpParams.headers[pName] = pValue
-    end
-    ---------------------------------------------------------------------
-    self.checkRequest = function()
-        -- look for async thread response message
-        if self.requestChannel and self.requestChannel:getCount() > 0 then
-            --unpack message
-            result = TSerial.unpack(self.requestChannel:pop())
-
-            self.requestChannel:clear()
-
-            -- set readyState
-            self.readyState = 4
-            --set status
-            self.status = result[2]
-            --set statusText
-            self.statusText = result[4]
-            --set responseText
-            self.responseText = result[5]
-
-            --remove request from activeRequests
-            local index = 1
-            for k, v in ipairs(HttpRequest.activeRequests) do
-                if HttpRequest.activeRequests[k].id == self.id then
-                    table.remove(HttpRequest.activeRequests, index)
-                end
-                index = index + 1
-            end
-
-            --finally call onReadyStateChange callback
-            self.onReadyStateChange()
-        end
-    end
-    ---------------------------------------------------------------------
-
-    table.insert(HttpRequest.activeRequests, self)
-    return HttpRequest.activeRequests[table.getn(HttpRequest.activeRequests)]
+	table.insert(HttpRequest.activeRequests, self)
+	return self
 end
 
 
 function HttpRequest.checkRequests()
-    for k, v in ipairs(HttpRequest.activeRequests) do
-        if HttpRequest.activeRequests[k] ~= nil then
-            HttpRequest.activeRequests[k].checkRequest()
-        end
-    end
+	for k, v in ipairs(HttpRequest.activeRequests) do
+		if HttpRequest.activeRequests[k] ~= nil then
+			HttpRequest.activeRequests[k].checkRequest()
+		end
+	end
 end
 
 -- ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
@@ -108,31 +124,28 @@ end
 -- Usage: table = TSerial.unpack( TSerial.pack(table) )
 TSerial = {}
 function TSerial.pack(t)
-    assert(type(t) == "table", "Can only TSerial.pack tables.")
-    local s = "{"
-    for k, v in pairs(t) do
-        local tk, tv = type(k), type(v)
-        if tk == "boolean" then k = k and "[true]" or "[false]"
-        elseif tk == "string" then if string.find(k, "[%c%p%s]") then k = '["'..k..'"]' end
-        elseif tk == "number" then k = "["..k.."]"
-        elseif tk == "table" then k = "["..TSerial.pack(k).."]"
-        else error("Attempted to Tserialize a table with an invalid key: "..tostring(k))
-        end
-        if tv == "boolean" then v = v and "true" or "false"
-        elseif tv == "string" then v = string.format("%q", v)
-        elseif tv == "number" then  -- no change needed
-        elseif tv == "table" then v = TSerial.pack(v)
-        else error("Attempted to Tserialize a table with an invalid value: "..tostring(v))
-        end
-        s = s..k.."="..v..","
-    end
-    return s.."}"
+	assert(type(t) == "table", "Can only TSerial.pack tables.")
+	local s = "{"
+	for k, v in pairs(t) do
+		local tk, tv = type(k), type(v)
+		if tk == "boolean" then k = k and "[true]" or "[false]"
+		elseif tk == "string" then if string.find(k, "[%c%p%s]") then k = '["'..k..'"]' end
+		elseif tk == "number" then k = "["..k.."]"
+		elseif tk == "table" then k = "["..TSerial.pack(k).."]"
+		else error("Attempted to Tserialize a table with an invalid key: "..tostring(k))
+		end
+		if tv == "boolean" then v = v and "true" or "false"
+		elseif tv == "string" then v = string.format("%q", v)
+		elseif tv == "number" then  -- no change needed
+		elseif tv == "table" then v = TSerial.pack(v)
+		else error("Attempted to Tserialize a table with an invalid value: "..tostring(v))
+		end
+		s = s..k.."="..v..","
+	end
+	return s.."}"
 end
 
 function TSerial.unpack(s)
-    assert(type(s) == "string", "Can only TSerial.unpack strings.")
-    assert(loadstring("TSerial.table="..s))()
-    local t = TSerial.table
-    TSerial.table = nil
-    return t
+	assert(type(s) == "string", "TSerial.unpack: string expected, got " .. type(s))
+	return assert(loadstring("return "..s))()
 end

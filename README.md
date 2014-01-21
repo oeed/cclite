@@ -26,15 +26,9 @@ My fork of CCLite has a different save directory than Sorroko's version. Mine wi
 TODO:
 -----
 
-Verify all functions work for 0.9.0 upgrade, fix those that are broken.
-
 Add in more error checking
 
 Add in virtual redstone system
-
-Fix odd endPage bug in virtual printer.
-
-Figure out how to manage disk drives and mounting.
 
 Make Error Levels report C functions properly.
 
@@ -42,7 +36,9 @@ Make peripheralAttach only add valid sides.
 
 Have virtual Disk Drives work with Treasure disks
 
-Don't load HTTP apis when conf.enableAPI_http is false
+Make virtual Disk Drives use mounting system
+
+Get Yielding working
 
 **Add in missing globals:**
 
