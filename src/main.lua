@@ -171,7 +171,7 @@ end
 
 function Emulator:resume(...)
 	if not self.running then return end
-	debug.sethook(self.proc,function() error("Too long without yielding",2) end,"",1e9)
+	debug.sethook(self.proc,function() error("Too long without yielding",2) end,"",9e7)
 	local ok, err = coroutine.resume(self.proc, ...)
 	debug.sethook(self.proc)
 	if not self.proc then return end -- Emulator:stop could be called within the coroutine resulting in proc being nil
@@ -185,7 +185,6 @@ function Emulator:resume(...)
 end
 
 function love.load()
-	jit.off() -- Required for "Too long without yielding"
 	if _conf.lockfps > 0 then 
 		min_dt = 1/_conf.lockfps
 		next_time = love.timer.getTime()

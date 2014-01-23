@@ -220,6 +220,7 @@ function api.loadstring(str, source)
 		local _, err = loadstring(str, source)
 		return f, err
 	end
+	jit.off(f) -- Required for "Too long without yielding"
 	setfenv(f, api.env)
 	return f, err
 end
