@@ -209,12 +209,12 @@ function api.loadstring(str, source)
 	source = source or "string"
 	if type(str) ~= "string" and type(str) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
 	if type(source) ~= "string" and type(source) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
-	source = tostring(source)
-	local sSS = source:sub(1,1)
+	local source2 = tostring(source)
+	local sSS = source2:sub(1,1)
 	if sSS == "@" or sSS == "=" then
-		source = source:sub(2)
+		source2 = source2:sub(2)
 	end
-	local f, err = loadstring(str, "@" .. source)
+	local f, err = loadstring(str, "@" .. source2)
 	if f == nil then
 		-- Get the normal error message
 		local _, err = loadstring(str, source)
@@ -231,16 +231,19 @@ function api.term.clear()
 		for x = 1, Screen.width do
 			Screen.textB[y][x] = " "
 			Screen.backgroundColourB[y][x] = api.comp.bg
-			Screen.textColourB[y][x] = 1 -- Don't need to bother setting text color
+			Screen.textColourB[y][x] = 1
 		end
 	end
 	Screen.dirty = true
 end
 function api.term.clearLine()
+	if api.comp.cursorY > Screen.height or api.comp.cursorY < 1 then
+		return
+	end
 	for x = 1, Screen.width do
 		Screen.textB[api.comp.cursorY][x] = " "
 		Screen.backgroundColourB[api.comp.cursorY][x] = api.comp.bg
-		Screen.textColourB[api.comp.cursorY][x] = 1 -- Don't need to bother setting text color
+		Screen.textColourB[api.comp.cursorY][x] = 1
 	end
 	Screen.dirty = true
 end
@@ -258,13 +261,17 @@ function api.term.setCursorPos(x, y)
 end
 function api.term.write(text)
 	text = serialize(text)
-	if api.comp.cursorY > Screen.height
-		or api.comp.cursorY < 1 then return end
+	if api.comp.cursorY > Screen.height or api.comp.cursorY < 1 or api.comp.cursorX > Screen.width then
+		api.comp.cursorX = api.comp.cursorX + #text
+		return
+	end
 
 	for i = 1, #text do
 		local char = text:sub(i, i)
-		if api.comp.cursorX + i - 1 <= Screen.width
-			and api.comp.cursorX + i - 1 >= 1 then
+		if api.comp.cursorX + i - 1 >= 1 then
+			if api.comp.cursorX + i - 1 > Screen.width then
+				break
+			end
 			Screen.textB[api.comp.cursorY][api.comp.cursorX + i - 1] = char
 			Screen.textColourB[api.comp.cursorY][api.comp.cursorX + i - 1] = api.comp.fg
 			Screen.backgroundColourB[api.comp.cursorY][api.comp.cursorX + i - 1] = api.comp.bg
