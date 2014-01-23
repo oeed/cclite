@@ -53,6 +53,49 @@ if _conf.enableAPI_http == true then
 	end
 end
 
+-- Needed for term.write, (file).write, and (file).writeLine
+-- This serialzier is bad, it is supposed to be bad. Don't use it.
+local function serializeImpl(t, tTracking)	
+	local sType = type(t)
+	if sType == "table" then
+		if tTracking[t] ~= nil then
+			return nil
+		end
+		tTracking[t] = true
+		
+		local result = "{"
+		for k,v in pairs(t) do
+			local cache1 = serializeImpl(k, tTracking)
+			local cache2 = serializeImpl(v, tTracking)
+			if cache1 ~= nil and cache2 ~= nil then
+				result = result..cache1.."="..cache2..", "
+			end
+		end
+		if result:sub(-2,-1) == ", " then result = result:sub(1,-3) end
+		result = result.."}"
+		return result
+	elseif sType == "string" then
+		return t
+	elseif sType == "number" then
+		if t == math.huge then
+			return "Infinity"
+		elseif t == -math.huge then
+			return "-Infinity"
+		else
+			return tostring(t):gsub("^[^e.]+%f[^0-9.]","%1.0"):gsub("e%+","e"):upper()
+		end
+	elseif sType == "boolean" then
+		return tostring(t)
+	else
+		return nil
+	end
+end
+
+local function serialize(t)
+	local tTracking = {}
+	return serializeImpl(t, tTracking) or ""
+end
+
 local function FileReadHandle(path)
 	if not vfs.exists(path) then
 		return nil
@@ -124,11 +167,11 @@ local function FileWriteHandle(path, append)
 		end,
 		writeLine = function(data)
 			if closed then error("Stream closed",2) end
-			File:write(data .. (_conf.useCRLF == true and "\r\n" or "\n"))
+			File:write(serialize(data) .. (_conf.useCRLF == true and "\r\n" or "\n"))
 		end,
 		write = function(data)
 			if closed then error("Stream closed",2) end
-			File:write(data)
+			File:write(serialize(data))
 		end,
 		flush = function()
 			File:flush()
@@ -159,49 +202,6 @@ local function FileBinaryWriteHandle(path, append)
 		end
 	}
 	return handle
-end
-
--- Needed for term.write
--- This serialzier is bad, it is supposed to be bad. Don't use it.
-local function serializeImpl(t, tTracking)	
-	local sType = type(t)
-	if sType == "table" then
-		if tTracking[t] ~= nil then
-			return nil
-		end
-		tTracking[t] = true
-		
-		local result = "{"
-		for k,v in pairs(t) do
-			local cache1 = serializeImpl(k, tTracking)
-			local cache2 = serializeImpl(v, tTracking)
-			if cache1 ~= nil and cache2 ~= nil then
-				result = result..cache1.."="..cache2..", "
-			end
-		end
-		if result:sub(-2,-1) == ", " then result = result:sub(1,-3) end
-		result = result.."}"
-		return result
-	elseif sType == "string" then
-		return t
-	elseif sType == "number" then
-		if t == math.huge then
-			return "Infinity"
-		elseif t == -math.huge then
-			return "-Infinity"
-		else
-			return tostring(t):gsub("^[^e.]+%f[^0-9.]","%1.0"):gsub("e%+","e"):upper()
-		end
-	elseif sType == "boolean" then
-		return tostring(t)
-	else
-		return nil
-	end
-end
-
-local function serialize(t)
-	local tTracking = {}
-	return serializeImpl(t, tTracking) or ""
 end
 
 api = {}
