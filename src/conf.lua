@@ -22,10 +22,7 @@ _conf = {
 	
 	-- Enable emulation of buggy Clipboard handling
 	compat_faultyClip = true,
-	
-	-- Mask [string "source"] from loadstring
-	compat_loadstringMask = true,
-	
+
 	-- Enable https connections through luasec
 	useLuaSec = false,
 	

@@ -35,7 +35,7 @@ end
 -- HELPER CLASSES/HANDLES
 -- TODO Make more efficient, use love.filesystem.lines
 local HTTPHandle
-if _conf.enableAPI_http == true then
+if _conf.enableAPI_http then
 	function HTTPHandle(contents, status)
 		local closed = false
 		local lineIndex = 1
@@ -73,109 +73,7 @@ if _conf.enableAPI_http == true then
 	end
 end
 
-local function FileReadHandle(path)
-	local contents = {}
-	for line in vfs.lines(path) do
-		table.insert(contents, line)
-	end
-	local closed = false
-	local lineIndex = 1
-	local handle
-	handle = {
-		close = function()
-			closed = true
-		end,
-		readLine = function()
-			if closed then return end
-			local str = contents[lineIndex]
-			lineIndex = lineIndex + 1
-			return str
-		end,
-		readAll = function()
-			if closed then return end
-			if lineIndex == 1 then
-				lineIndex = #contents + 1
-				return table.concat(contents, '\n')
-			else
-				local tData = {}
-				local data = handle.readLine()
-				while data ~= nil do
-					table.insert(tData, data)
-					data = handle.readLine()
-				end
-				return table.concat(tData, '\n')
-			end
-		end
-	}
-	return handle
-end
-
-local function FileBinaryReadHandle(path)
-	local closed = false
-	local File = vfs.newFile(path, "r")
-	if File == nil then return end
-	local handle = {
-		close = function()
-			closed = true
-			File:close()
-		end,
-		read = function()
-			if closed or File:eof() then return end
-			return File:read(1):byte()
-		end
-	}
-	return handle
-end
-
-local function FileWriteHandle(path, append)
-	local closed = false
-	local File = vfs.newFile(path, append and "a" or "w")
-	if File == nil then return end
-	local handle = {
-		close = function()
-			closed = true
-			File:close()
-		end,
-		writeLine = function(data)
-			if closed then error("Stream closed",2) end
-			File:write(data .. (_conf.useCRLF == true and "\r\n" or "\n"))
-		end,
-		write = function(data)
-			if closed then error("Stream closed",2) end
-			File:write(data)
-		end,
-		flush = function()
-			File:flush()
-		end
-	}
-	return handle
-end
-
-local function FileBinaryWriteHandle(path, append)
-	local closed = false
-	local File = vfs.newFile(path, append and "a" or "w")
-	if File == nil then return end
-	local handle = {
-		close = function()
-			closed = true
-			File:close()
-		end,
-		write = function(data)
-			if closed then return end
-			if type(data) ~= "number" then return end
-			while data < 0 do
-				data = data + 256
-			end
-			File:write(string.char(data % 256))
-		end,
-		flush = function()
-			File:flush()
-		end
-	}
-	return handle
-end
-
--- Needed for term.write
+-- Needed for term.write, (file).write, and (file).writeLine
 -- This serialzier is bad, it is supposed to be bad. Don't use it.
 local function serializeImpl(t, tTracking)	
 	local sType = type(t)
@@ -218,6 +116,114 @@ local function serialize(t)
 	return serializeImpl(t, tTracking) or ""
 end
 
+local function FileReadHandle(path)
+	if not vfs.exists(path) then
+		return nil
+	end
+	local contents = {}
+	for line in vfs.lines(path) do
+		table.insert(contents, line)
+	end
+	local closed = false
+	local lineIndex = 1
+	local handle
+	handle = {
+		close = function()
+			closed = true
+		end,
+		readLine = function()
+			if closed then return end
+			local str = contents[lineIndex]
+			lineIndex = lineIndex + 1
+			return str
+		end,
+		readAll = function()
+			if closed then return end
+			if lineIndex == 1 then
+				lineIndex = #contents + 1
+				return table.concat(contents, '\n')
+			else
+				local tData = {}
+				local data = handle.readLine()
+				while data ~= nil do
+					table.insert(tData, data)
+					data = handle.readLine()
+				end
+				return table.concat(tData, '\n')
+			end
+		end
+	}
+	return handle
+end
+
+local function FileBinaryReadHandle(path)
+	if not vfs.exists(path) then
+		return nil
+	end
+	local closed = false
+	local File = vfs.newFile(path, "r")
+	if File == nil then return end
+	local handle = {
+		close = function()
+			closed = true
+			File:close()
+		end,
+		read = function()
+			if closed or File:eof() then return end
+			return File:read(1):byte()
+		end
+	}
+	return handle
+end
+
+local function FileWriteHandle(path, append)
+	local closed = false
+	local File = vfs.newFile(path, append and "a" or "w")
+	if File == nil then return end
+	local handle = {
+		close = function()
+			closed = true
+			File:close()
+		end,
+		writeLine = function(data)
+			if closed then error("Stream closed",2) end
+			File:write(serialize(data) .. (_conf.useCRLF and "\r\n" or "\n"))
+		end,
+		write = function(data)
+			if closed then error("Stream closed",2) end
+			File:write(serialize(data))
+		end,
+		flush = function()
+			File:flush()
+		end
+	}
+	return handle
+end
+
+local function FileBinaryWriteHandle(path, append)
+	local closed = false
+	local File = vfs.newFile(path, append and "a" or "w")
+	if File == nil then return end
+	local handle = {
+		close = function()
+			closed = true
+			File:close()
+		end,
+		write = function(data)
+			if closed then return end
+			if type(data) ~= "number" then return end
+			while data < 0 do
+				data = data + 256
+			end
+			File:write(string.char(data % 256))
+		end,
+		flush = function()
+			File:flush()
+		end
+	}
+	return handle
+end
+
 local function uplink_push(obj)
 	if uplink:getCount() > _conf.cclite_maxMessages then
 		uplink:supply(obj)
@@ -227,31 +233,24 @@ local function uplink_push(obj)
 end
 
 api = {}
-if _conf.compat_loadstringMask == true then
-	function api.loadstring(str, source)
-		source = source or "string"
-		if type(str) ~= "string" and type(str) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
-		if type(source) ~= "string" and type(source) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
-		local f, err = loadstring(str, "=" .. source)
-		if f == nil then
-			-- Get the normal error message
-			local _, err = loadstring(str, source)
-			return f, err
-		end
-		setfenv(f, api.env)
+function api.loadstring(str, source)
+	source = source or "string"
+	if type(str) ~= "string" and type(str) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
+	if type(source) ~= "string" and type(source) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
+	local source2 = tostring(source)
+	local sSS = source2:sub(1,1)
+	if sSS == "@" or sSS == "=" then
+		source2 = source2:sub(2)
+	end
+	local f, err = loadstring(str, "@" .. source2)
+	if f == nil then
+		-- Get the normal error message
+		local _, err = loadstring(str, source)
 		return f, err
 	end
-else
-	function api.loadstring(str, source)
-		source = source or "string"
-		if type(str) ~= "string" and type(str) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
-		if type(source) ~= "string" and type(source) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
-		local f, err = loadstring(str, source)
-		if f then
-			setfenv(f, api.env)
-		end
-		return f, err
-	end
+	jit.off(f) -- Required for "Too long without yielding"
+	setfenv(f, api.env)
+	return f, err
 end
 
 api.term = {}
@@ -274,9 +273,7 @@ function api.term.setCursorPos(x, y)
 	uplink_push({"termSetCursorPos",x,y})
 end
 function api.term.write(text)
-	if api.comp.cursorY > _conf.terminal_height	or api.comp.cursorY < 1 then return end
 	text = serialize(text)
-		
 	api.comp.cursorX = api.comp.cursorX + #text
 	uplink_push({"termWrite",text})
 end
@@ -322,7 +319,7 @@ end
 
 api.cclite = {}
 api.cclite.peripherals = {}
-if _conf.enableAPI_cclite == true then
+if _conf.enableAPI_cclite then
 	function api.cclite.peripheralAttach(sSide, sType)
 		if type(sSide) ~= "string" or type(sType) ~= "string" then
 			error("Expected string, string",2)
@@ -354,9 +351,13 @@ if _conf.enableAPI_cclite == true then
 		if not api.cclite.peripherals[sSide] then error("No peripheral attached",2) end
 		return api.cclite.peripherals[sSide].ccliteCall(sMethod, ...)
 	end
+	function api.cclite.message(sMessage)
+		if type(sMessage) ~= "string" then error("Expected string",2) end
+		uplink_push({"screenMessage",sMessage})
+	end
 end
 
-if _conf.enableAPI_http == true then
+if _conf.enableAPI_http then
 	api.http = {}
 	function api.http.request(sUrl, sParams)
 		if type(sUrl) ~= "string" then
@@ -733,22 +734,13 @@ function api.fs.delete(path)
 end
 
 api.redstone = {}
-local function isval(val,...)
-	local canidates = {...}
-	for i = 1,#canidates do
-		if canidates[i] == val then
-			return true
-		end
-	end
-	return false
-end
 function api.redstone.getSides()
 	return {"top","bottom","left","right","front","back"}
 end
 function api.redstone.getInput(side)
 	if type(side) ~= "string" then
 		error("Expected string",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 	return false
@@ -756,14 +748,14 @@ end
 function api.redstone.setOutput(side, value)
 	if type(side) ~= "string" or type(value) ~= "boolean" then
 		error("Expected string, boolean",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 end
 function api.redstone.getOutput(side)
 	if type(side) ~= "string" then
 		error("Expected string",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 	return false
@@ -771,7 +763,7 @@ end
 function api.redstone.getAnalogInput(side)
 	if type(side) ~= "string" then
 		error("Expected string",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 	return 0
@@ -779,14 +771,14 @@ end
 function api.redstone.setAnalogOutput(side, strength)
 	if type(side) ~= "string" or type(strength) ~= "number" then
 		error("Expected string, number",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 end
 function api.redstone.getAnalogOutput(side)
 	if type(side) ~= "string" then
 		error("Expected string",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 	return 0
@@ -794,7 +786,7 @@ end
 function api.redstone.getBundledInput(side)
 	if type(side) ~= "string" then
 		error("Expected string",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 	return 0
@@ -802,7 +794,7 @@ end
 function api.redstone.getBundledOutput(sude)
 	if type(side) ~= "string" then
 		error("Expected string",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 	return 0
@@ -810,14 +802,14 @@ end
 function api.redstone.setBundledOutput(side, colors)
 	if type(side) ~= "string" or type(colors) ~= "number" then
 		error("Expected string, number",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 end
 function api.redstone.testBundledInput(side, color)
 	if type(side) ~= "string" or type(color) ~= "number" then
 		error("Expected string, number",2)
-	elseif not isval(side,"top","bottom","left","right","front","back") then
+	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
 	return color == 0
@@ -1015,17 +1007,18 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 			bnot = api.bit.bnot,
 		},
 	}
-	if _conf.enableAPI_http == true then
+	if _conf.enableAPI_http then
 		api.env.http = {
 			request = api.http.request,
 		}
 	end
-	if _conf.enableAPI_cclite == true then
+	if _conf.enableAPI_cclite then
 		api.env.cclite = {
 			peripheralAttach = api.cclite.peripheralAttach,
 			peripheralDetach = api.cclite.peripheralDetach,
 			call = api.cclite.call,
 			log = print,
+			message = api.cclite.message,
 			traceback = debug.traceback,
 		}
 	end

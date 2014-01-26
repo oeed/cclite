@@ -1,4 +1,40 @@
+-- Verify configuration
+assert(type(_conf.enableAPI_http) == "boolean", "Invalid value for _conf.enableAPI_http")
+assert(type(_conf.enableAPI_cclite) == "boolean", "Invalid value for _conf.enableAPI_cclite")
+assert(type(_conf.terminal_height) == "number", "Invalid value for _conf.terminal_height")
+assert(type(_conf.terminal_width) == "number", "Invalid value for _conf.terminal_width")
+assert(type(_conf.terminal_guiScale) == "number", "Invalid value for _conf.terminal_guiScale")
+assert(type(_conf.cclite_showFPS) == "boolean", "Invalid value for _conf.cclite_showFPS")
+assert(type(_conf.lockfps) == "number", "Invalid value for _conf.lockfps")
+assert(type(_conf.compat_faultyClip) == "boolean", "Invalid value for _conf.compat_faultyClip")
+assert(type(_conf.useLuaSec) == "boolean", "Invalid value for _conf.useLuaSec")
+assert(type(_conf.useCRLF) == "boolean", "Invalid value for _conf.useCRLF")
+
 require("render")
+
+if _conf.compat_loadstringMask ~= nil then
+	Screen:message("_conf.compat_loadstringMask is obsolete")
+end
+
+-- Test if HTTPS is working
+if _conf.useLuaSec then
+	local stat, err = pcall(function()
+		local trash = require("ssl.https")
+	end)
+	if stat ~= true then
+		_conf.useLuaSec = false
+		Screen:message("Could not load HTTPS support")
+		if err:find("module 'ssl.core' not found") then
+			print("CCLite cannot find ssl.dll or ssl.so\n\n" .. err)
+		elseif err:find("The specified procedure could not be found") then
+			print("CCLite cannot find ssl.lua\n\n" .. err)
+		elseif err:find("module 'ssl.https' not found") then
+			print("CCLite cannot find ssl/https.lua\n\n" .. err)
+		else
+			print(err)
+		end
+	end
+end
 
 demand = love.thread.getChannel("demand")
 downlink = love.thread.getChannel("downlink")
@@ -15,25 +51,28 @@ api.comp = {
 }
 api.term = {}
 function api.term.clear()
-	for y = 1, Screen.height do
-		for x = 1, Screen.width do
+	for y = 1, _conf.terminal_height do
+		for x = 1, _conf.terminal_width do
 			Screen.textB[y][x] = " "
 			Screen.backgroundColourB[y][x] = api.comp.bg
-			Screen.textColourB[y][x] = 1 -- Don't need to bother setting text color
+			Screen.textColourB[y][x] = 1
 		end
 	end
 	Screen.dirty = true
 end
 function api.term.clearLine()
-	for x = 1, Screen.width do
+	if api.comp.cursorY > _conf.terminal_height or api.comp.cursorY < 1 then
+		return
+	end
+	for x = 1, _conf.terminal_width do
 		Screen.textB[api.comp.cursorY][x] = " "
 		Screen.backgroundColourB[api.comp.cursorY][x] = api.comp.bg
-		Screen.textColourB[api.comp.cursorY][x] = 1 -- Don't need to bother setting text color
+		Screen.textColourB[api.comp.cursorY][x] = 1
 	end
 	Screen.dirty = true
 end
 function api.term.getSize()
-	return Screen.width, Screen.height
+	return _conf.terminal_width, _conf.terminal_height
 end
 function api.term.getCursorPos()
 	return api.comp.cursorX, api.comp.cursorY
@@ -44,10 +83,17 @@ function api.term.setCursorPos(x, y)
 	Screen.dirty = true
 end
 function api.term.write(text)
+	if api.comp.cursorY > _conf.terminal_height or api.comp.cursorY < 1 or api.comp.cursorX > _conf.terminal_width then
+		api.comp.cursorX = api.comp.cursorX + #text
+		return
+	end
+
 	for i = 1, #text do
 		local char = text:sub(i, i)
-		if api.comp.cursorX + i - 1 <= Screen.width
-			and api.comp.cursorX + i - 1 >= 1 then
+		if api.comp.cursorX + i - 1 >= 1 then
+			if api.comp.cursorX + i - 1 > _conf.terminal_width then
+				break
+			end
 			Screen.textB[api.comp.cursorY][api.comp.cursorX + i - 1] = char
 			Screen.textColourB[api.comp.cursorY][api.comp.cursorX + i - 1] = api.comp.fg
 			Screen.backgroundColourB[api.comp.cursorY][api.comp.cursorX + i - 1] = api.comp.bg
@@ -76,27 +122,27 @@ function api.term.scroll(n)
 	local textBuffer = {}
 	local backgroundColourBuffer = {}
 	local textColourBuffer = {}
-	for y = 1, Screen.height do
-		if y - n > 0 and y - n <= Screen.height then
+	for y = 1, _conf.terminal_height do
+		if y - n > 0 and y - n <= _conf.terminal_height then
 			textBuffer[y - n] = {}
 			backgroundColourBuffer[y - n] = {}
 			textColourBuffer[y - n] = {}
-			for x = 1, Screen.width do
+			for x = 1, _conf.terminal_width do
 				textBuffer[y - n][x] = Screen.textB[y][x]
 				backgroundColourBuffer[y - n][x] = Screen.backgroundColourB[y][x]
 				textColourBuffer[y - n][x] = Screen.textColourB[y][x]
 			end
 		end
 	end
-	for y = 1, Screen.height do
+	for y = 1, _conf.terminal_height do
 		if textBuffer[y] ~= nil then
-			for x = 1, Screen.width do
+			for x = 1, _conf.terminal_width do
 				Screen.textB[y][x] = textBuffer[y][x]
 				Screen.backgroundColourB[y][x] = backgroundColourBuffer[y][x]
 				Screen.textColourB[y][x] = textColourBuffer[y][x]
 			end
 		else
-			for x = 1, Screen.width do
+			for x = 1, _conf.terminal_width do
 				Screen.textB[y][x] = " "
 				Screen.backgroundColourB[y][x] = api.comp.bg
 				Screen.textColourB[y][x] = 1 -- Don't need to bother setting text color
@@ -153,8 +199,8 @@ function love.mousereleased(x, y, _button)
 	downlink:push({"mousereleased",x, y, _button})
 end
 
-function love.mousepressed(x, y, _button)
-	downlink:push({"mousepressed",x, y, _button})
+function love.mousepressed(x, y, button)
+	downlink:push({"mousepressed",x, y, button})
 end
 
 function love.textinput(unicode)
@@ -162,10 +208,12 @@ function love.textinput(unicode)
 end
 
 function love.keypressed(key, isrepeat)
-	if Emulator.actions.shutdown == nil and love.keyboard.isDown("ctrl") and not isrepeat and key == "s" then
-		Emulator.actions.shutdown =  love.timer.getTime()
-	elseif Emulator.actions.reboot == nil and love.keyboard.isDown("ctrl") and not isrepeat and key == "r" then
-		Emulator.actions.reboot =    love.timer.getTime()
+	if love.keyboard.isDown("ctrl") and not isrepeat then
+		if Emulator.actions.shutdown == nil and key == "s" then
+			Emulator.actions.shutdown =  love.timer.getTime()
+		elseif Emulator.actions.reboot == nil and key == "r" then
+			Emulator.actions.reboot =    love.timer.getTime()
+		end
 	end
 	if Emulator.running == false and not isrepeat then
 		Emulator:start()
@@ -176,6 +224,9 @@ function love.keypressed(key, isrepeat)
 end
 
 function love.load()
+	if love.system.getOS() == "Android" then
+		love.keyboard.setTextInput(true)
+	end
 
 	if _conf.lockfps > 0 then 
 		min_dt = 1/_conf.lockfps
@@ -184,20 +235,9 @@ function love.load()
 	
 	love.filesystem.setIdentity("ccemu")
 	
-	local glyphs = ""
-	for i = 32,126 do
-		glyphs = glyphs .. string.char(i)
-	end
-	font = love.graphics.newImageFont("res/minecraft.png",glyphs)
-	font:setFilter("nearest","nearest")
-	love.graphics.setFont(font)
-	
 	love.keyboard.setKeyRepeat(true)
 	
-	Screen:init() -- Prevent a race condition
-	
 	Emulator:start()
-	
 end
 
 function love.visible(see)
@@ -253,7 +293,15 @@ function love.update()
 					fg = 1,
 					blink = false,
 				}
-				Screen:init()
+				for y = 1, _conf.terminal_height do
+					local screen_textB = Screen.textB[y]
+					local screen_backgroundColourB = Screen.backgroundColourB[y]
+					for x = 1, _conf.terminal_width do
+						screen_textB[x] = " "
+						screen_backgroundColourB[x] = 32768
+					end
+				end
+				Screen.dirty = true
 			elseif msg[1] == "dirtyScreen" then
 				Screen.dirty = true
 			elseif msg[1] == "termClear" then
@@ -274,6 +322,8 @@ function love.update()
 				api.term.scroll(msg[2])
 			elseif msg[1] == "isDown" then
 				demand:push(love.keyboard.isDown(msg[2]))
+			elseif msg[1] == "screenMessage" then
+				Screen:message(msg[2])
 			else
 				print("Unknown data: " .. table.concat(msg,", "))
 			end
@@ -300,6 +350,16 @@ function love.update()
 		if now - Screen.lastCursor >= 0.25 then
 			Screen.showCursor = not Screen.showCursor
 			Screen.lastCursor = now
+			if api.comp.cursorY >= 1 and api.comp.cursorY <= _conf.terminal_height and api.comp.cursorX >= 1 and api.comp.cursorX <= _conf.terminal_width then
+				Screen.dirty = true
+			end
+		end
+	end
+	
+	-- Messages
+	for i = 1, 10 do
+		if now - Screen.messages[i][2] > 4 and Screen.messages[i][3] == true then
+			Screen.messages[i][3] = false
 			Screen.dirty = true
 		end
 	end
@@ -344,7 +404,7 @@ function love.run()
 		if not love.window.isVisible() then Screen.dirty = false end
 
         if love.window.isCreated() and Screen.dirty and love.timer.getTime() - lastDraw >= 0.05 then
-			love.draw()
+			Screen:draw()
 			love.graphics.present()
 			Screen.dirty = false
 			lastDraw = love.timer.getTime()

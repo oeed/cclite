@@ -38,8 +38,6 @@ COLOUR_CODE = {
 }
 
 Screen = {
-	width = _conf.terminal_width,
-	height = _conf.terminal_height,
 	sWidth = (_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2),
 	sHeight = (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2),
 	textB = {},
@@ -52,94 +50,123 @@ Screen = {
 	lastCursor = nil,
 	dirty = true,
 	tOffset = {},
+	messages = {},
 	setup = false,
 }
-function Screen:init()
-	if self.setup == false then
-		for y = 1, self.height do
-			self.textB[y] = {}
-			self.backgroundColourB[y] = {}
-			self.textColourB[y] = {}
-			for x = 1, self.width do
-				self.textB[y][x] = " "
-				self.backgroundColourB[y][x] = 32768
-				self.textColourB[y][x] = 1
-			end
-		end
-
-		self.font = love.graphics.getFont()
-		for i = 32,126 do self.tOffset[string.char(i)] = math.floor(3 - self.font:getWidth(string.char(i)) / 2) * _conf.terminal_guiScale end
-		self.tOffset["@"] = 0
-		self.tOffset["~"] = 0
-		self.setup = true
-	else
-		for y = 1, self.height do
-			for x = 1, self.width do
-				self.textB[y][x] = " "
-				self.backgroundColourB[y][x] = 32768
-			end
-		end
+for y = 1, _conf.terminal_height do
+	Screen.textB[y] = {}
+	Screen.backgroundColourB[y] = {}
+	Screen.textColourB[y] = {}
+	for x = 1, _conf.terminal_width do
+		Screen.textB[y][x] = " "
+		Screen.backgroundColourB[y][x] = 32768
+		Screen.textColourB[y][x] = 1
 	end
-	self.dirty = true
 end
+
+local glyphs = ""
+for i = 32,126 do
+	glyphs = glyphs .. string.char(i)
+end
+Screen.font = love.graphics.newImageFont("res/minecraft.png",glyphs)
+Screen.font:setFilter("nearest","nearest")
+love.graphics.setFont(Screen.font)
+
+for i = 32,126 do Screen.tOffset[string.char(i)] = math.floor(3 - Screen.font:getWidth(string.char(i)) / 2) * _conf.terminal_guiScale end
+Screen.tOffset["@"] = 0
+Screen.tOffset["~"] = 0
+
+local msgTime = love.timer.getTime() + 5
+for i = 1,10 do
+	Screen.messages[i] = {"",msgTime,false}
+end
+
+local COLOUR_FULL_WHITE = {255,255,255}
+local COLOUR_FULL_BLACK = {0,0,0}
+local COLOUR_HALF_BLACK = {0,0,0,72}
 
 -- Local functions are faster than global
 local lsetCol = love.graphics.setColor
 local ldrawRect = love.graphics.rectangle
-local ldrawLine = love.graphics.line
 local lprint = love.graphics.print
 local tOffset = Screen.tOffset
-local decWidth = Screen.width - 1
-local decHeight = Screen.height - 1
+local decWidth = _conf.terminal_width - 1
+local decHeight = _conf.terminal_height - 1
 
-local lastColor
-local function setColor(c,f)
-	if f or lastColor ~= c then
+local lastColor = COLOUR_FULL_WHITE
+local function setColor(c)
+	if lastColor ~= c then
 		lastColor = c
 		lsetCol(c)
 	end
 end
 
+local messages = {}
+
+function Screen:message(message)
+	for i = 1,9 do
+		self.messages[i] = self.messages[i+1]
+	end
+	self.messages[10] = {message,love.timer.getTime(),true}
+	self.dirty = true
+end
+
+local function drawMessage(message,x,y)
+	setColor(COLOUR_HALF_BLACK)
+	ldrawRect("fill", x, y - _conf.terminal_guiScale, Screen.font:getWidth(message) * _conf.terminal_guiScale, Screen.pixelHeight)
+	setColor(COLOUR_FULL_WHITE)
+	lprint(message, x, y, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
+end
+
 function Screen:draw()
+	-- Render terminal
 	if not Emulator.running then
-		lsetCol({0,0,0})
+		setColor(COLOUR_FULL_BLACK)
 		ldrawRect("fill", 0, 0, self.sWidth, self.sHeight)
-		return
-	end
+	else
+		-- Render background color
+		setColor(COLOUR_CODE[self.backgroundColourB[1][1]])
+		for y = 0, decHeight do
+			for x = 0, decWidth do
 
-	-- TODO Better damn rendering!
-	-- Should only update sections that changed.
+				setColor(COLOUR_CODE[self.backgroundColourB[y + 1][x + 1]]) -- TODO COLOUR_CODE lookup might be too slow?
+				ldrawRect("fill", x * self.pixelWidth + (x == 0 and 0 or _conf.terminal_guiScale), y * self.pixelHeight + (y == 0 and 0 or _conf.terminal_guiScale), self.pixelWidth + ((x == 0 or x == decWidth) and _conf.terminal_guiScale or 0), self.pixelHeight + ((y == 0 or y == decHeight) and _conf.terminal_guiScale or 0))
 
-	-- Render the Background Color
-	setColor(COLOUR_CODE[self.backgroundColourB[1][1]], true)
-	for y = 0, decHeight do
-		for x = 0, decWidth do
-
-			setColor(COLOUR_CODE[self.backgroundColourB[y + 1][x + 1]]) -- TODO COLOUR_CODE lookup might be too slow?
-			ldrawRect("fill", x * self.pixelWidth + (x == 0 and 0 or _conf.terminal_guiScale), y * self.pixelHeight + (y == 0 and 0 or _conf.terminal_guiScale), self.pixelWidth + ((x == 0 or x == decWidth) and _conf.terminal_guiScale or 0), self.pixelHeight + ((y == 0 or y == decHeight) and _conf.terminal_guiScale or 0))
-
-		end
-	end
-
-	-- Render the Text
-	for y = 0, self.height - 1 do
-		for x = 0, self.width - 1 do
-			local text = self.textB[y + 1][x + 1]
-			if text ~= " " and text ~= "\t" then
-				local sByte = string.byte(text)
-				if sByte == 9 then
-					text = " "
-				elseif sByte < 32 or sByte > 126 or sByte == 96 then
-					text = "?"
-				end
-				setColor(COLOUR_CODE[self.textColourB[y + 1][x + 1]])
-				lprint(text, x * self.pixelWidth + tOffset[text] + _conf.terminal_guiScale, y * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 			end
 		end
+
+		-- Render text
+		for y = 0, decHeight do
+			local self_textB = self.textB[y + 1]
+			local self_textColourB = self.textColourB[y + 1]
+			for x = 0, decWidth do
+				local text = self_textB[x + 1]
+				if text ~= " " and text ~= "\t" then
+					local sByte = string.byte(text)
+					if sByte < 32 or sByte > 126 or sByte == 96 then
+						text = "?"
+					end
+					setColor(COLOUR_CODE[self_textColourB[x + 1]])
+					lprint(text, x * self.pixelWidth + tOffset[text] + _conf.terminal_guiScale, y * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
+				end
+			end
+		end
+
+		-- Render cursor
+		if api.comp.blink and self.showCursor then
+			setColor(COLOUR_CODE[api.comp.fg])
+			lprint("_", (api.comp.cursorX - 1) * self.pixelWidth + tOffset["_"] + _conf.terminal_guiScale, (api.comp.cursorY - 1) * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
+		end
 	end
 
-	if api.comp.blink and self.showCursor then
-		setColor(COLOUR_CODE[api.comp.fg])
-		lprint("_", (api.comp.cursorX - 1) * self.pixelWidth + tOffset["_"] + _conf.terminal_guiScale, (api.comp.cursorY - 1) * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
+	-- Render emulator elements
+	for i = 1,10 do
+		if self.messages[i][3] then
+			drawMessage(self.messages[i][1],_conf.terminal_guiScale, self.sHeight - ((self.pixelHeight + _conf.terminal_guiScale) * (11 - i)) + _conf.terminal_guiScale)
+		end
+	end
+
+	if _conf.cclite_showFPS then
+		drawMessage("FPS: " .. Emulator.FPS, self.sWidth - (49 * _conf.terminal_guiScale), _conf.terminal_guiScale * 2)
 	end
 end

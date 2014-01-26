@@ -2,14 +2,12 @@ function crash() error("GOODBYE WORLD") end
 demand = love.thread.getChannel("demand")
 _conf = demand:demand()
 
-jit.off() -- Required for "Too long without yielding"
-
 require("love.filesystem")
 require("love.timer")
 require("love.mouse")
 require("love.system")
 --require("love.keyboard")
-if _conf.enableAPI_http == true then require("http.HttpRequest") end
+if _conf.enableAPI_http then require("http.HttpRequest") end
 bit = require("bit")
 require("api")
 require("vfs")
@@ -28,13 +26,20 @@ local function math_bind(val,lower,upper)
 	return math.min(math.max(val,lower),upper)
 end
 
--- Load virtual peripherals.
+-- Load virtual peripherals
 peripheral = {}
+peripheral.base = {}
+peripheral.types = {}
 local tFiles = love.filesystem.getDirectoryItems("peripheral")
 for k,v in pairs(tFiles) do
-	require("peripheral." .. v:sub(1,-5))
+	local stat, err = pcall(require,"peripheral." .. v:sub(1,-5))
+	if stat == false then
+		uplink:push({"screenMessage", "Could not load peripheral." .. v:sub(1,-5)})
+		print(err)
+	end
 end
 
+-- Conversion table for Love2D keys to LWJGL key codes
 keys = {
 	["q"] = 16, ["w"] = 17, ["e"] = 18, ["r"] = 19,
 	["t"] = 20, ["y"] = 21, ["u"] = 22, ["i"] = 23,
@@ -64,6 +69,27 @@ keys = {
 	["tab"] = 15,
 	["return"] = 28,
 	["delete"] = 211,
+	["capslock"] = 58,
+	["numlock"] = 69,
+	["scrolllock"] = 70,
+
+	["f1"] = 59,
+	["f2"] = 60,
+	["f3"] = 61,
+	["f4"] = 62,
+	["f5"] = 63,
+	["f6"] = 64,
+	["f7"] = 65,
+	["f8"] = 66,
+	["f9"] = 67,
+	["f10"] = 68,
+	["f12"] = 88,
+	["f13"] = 100,
+	["f14"] = 101,
+	["f15"] = 102,
+	["f16"] = 103,
+	["f17"] = 104,
+	["f18"] = 105,
 
 	["rshift"] = 54,
 	["lshift"] = 42,
@@ -95,7 +121,6 @@ Emulator = {
 	running = false,
 	killself = 0,
 	actions = { -- Keyboard commands i.e. ctrl + s and timers/alarms
-		terminate = nil,
 		lastTimer = 0,
 		lastAlarm = 0,
 		timers = {},
@@ -115,11 +140,10 @@ Emulator = {
 }
 
 function Emulator:start()
-	api.init()
 	uplink:push({"initScreen"})
+	api.init()
 
-	local fn, err = api.loadstring(love.filesystem.read("lua/bios.lua"),"bios")
-	local tEnv = {}
+	local fn, err = loadstring(love.filesystem.read("lua/bios.lua"),"@bios")
 
 	if not fn then
 		print(err)
@@ -151,7 +175,7 @@ end
 
 function Emulator:resume( ... )
 	if not self.running then return end
-	debug.sethook(self.proc,function() error("Too long without yielding",2) end,"",1e8)
+	debug.sethook(self.proc,function() error("Too long without yielding",2) end,"",9e7)
 	debug.sethook(self.proc,function() local a = murder:pop() if a ~= nil then api.os[a == true and "reboot" or "shutdown"]() end end,"",100)
 	local ok, err = coroutine.resume(self.proc, ...)
 	debug.sethook(self.proc)
@@ -172,9 +196,6 @@ function love.load()
 		min_dt = 1/_conf.lockfps
 		next_time = love.timer.getTime()
 	end
-
-	vfs.mount("/data","/")
-	vfs.mount("/lua/rom","/rom")
 	
 	local fontPack = {131,161,163,166,170,171,172,174,186,187,188,189,191,196,197,198,199,201,209,214,215,216,220,224,225,226,228,229,230,231,232,233,234,235,236,237,238,239,241,242,243,244,246,248,249,250,251,252,255}
 	ChatAllowedCharacters = {}
@@ -190,46 +211,48 @@ function love.load()
 		love.filesystem.createDirectory("data/") -- Make the user data folder
 	end
 	
+	vfs.mount("/data","/")
+	vfs.mount("/lua/rom","/rom")
+	
 	Emulator:start()
 end
 
 function love.mousereleased( x, y, _button )
-
-	if x > 0 and x < Screen.sWidth
-		and y > 0 and y < Screen.sHeight then -- Within screen bounds.
-
+	if x > 0 and x < Screen.sWidth and y > 0 and y < Screen.sHeight then -- Within screen bounds.
 		Emulator.mouse.isPressed = false
 	end
 end
 
-function love.mousepressed(x, y, _button)
+function love.mousepressed(x, y, button)
+	if x > 0 and x < Screen.sWidth and y > 0 and y < Screen.sHeight then -- Within screen bounds.
+		local termMouseX = math_bind(math.floor((x - _conf.terminal_guiScale) / Screen.pixelWidth) + 1,1,_conf.terminal_width)
+		local termMouseY = math_bind(math.floor((y - _conf.terminal_guiScale) / Screen.pixelHeight) + 1,1,_conf.terminal_height)
 
-	if x > 0 and x < Screen.sWidth
-		and y > 0 and y < Screen.sHeight then -- Within screen bounds.
-
-		local termMouseX = math_bind(math.floor( (x - _conf.terminal_guiScale) / Screen.pixelWidth ) + 1,1,_conf.terminal_width)
-    	local termMouseY = math_bind(math.floor( (y - _conf.terminal_guiScale) / Screen.pixelHeight ) + 1,1,_conf.terminal_height)
-
-		if not Emulator.mousePressed and _button == "r" or _button == "l" then
+		if button == "l" or button == "m" or button == "r" then
 			Emulator.mouse.isPressed = true
 			Emulator.mouse.lastTermX = termMouseX
 			Emulator.mouse.lastTermY = termMouseY
-			table.insert(Emulator.eventQueue, {"mouse_click", _button == "r" and 2 or 1, termMouseX, termMouseY})
-
-		elseif _button == "wu" then -- Scroll up
+			if button == "l" then button = 1
+			elseif button == "m" then button = 3
+			elseif button == "r" then button = 2
+			end
+			table.insert(Emulator.eventQueue, {"mouse_click", button, termMouseX, termMouseY})
+		elseif button == "wu" then -- Scroll up
 			table.insert(Emulator.eventQueue, {"mouse_scroll", -1, termMouseX, termMouseX})
-
-		elseif _button == "wd" then -- Scroll down
+		elseif button == "wd" then -- Scroll down
 			table.insert(Emulator.eventQueue, {"mouse_scroll", 1, termMouseX, termMouseY})
-
 		end
 	end
 end
 
 function love.textinput(unicode)
-   	if ChatAllowedCharacters[unicode:byte()] == true then
-    	table.insert(Emulator.eventQueue, {"char", unicode})
-    end
+		-- Hack to get around android bug
+		if love.system.getOS() == "Android" and keys[unicode] ~= nil then
+			table.insert(Emulator.eventQueue, {"key", keys[unicode]})
+		end
+		if ChatAllowedCharacters[unicode:byte()] then
+			table.insert(Emulator.eventQueue, {"char", unicode})
+		end
 end
 
 function love.keypressed(key, isrepeat)
@@ -242,7 +265,7 @@ function love.keypressed(key, isrepeat)
 		cliptext = cliptext:gsub("\r\n","\n")
 		local nloc = cliptext:find("\n") or -1
 		if nloc > 0 then
-			cliptext = cliptext:sub(1, nloc - (_conf.compat_faultyClip == true and 2 or 1))
+			cliptext = cliptext:sub(1, nloc - (_conf.compat_faultyClip and 2 or 1))
 		end
 		cliptext = cliptext:sub(1,127)
 		for i = 1,#cliptext do
@@ -251,10 +274,14 @@ function love.keypressed(key, isrepeat)
 	elseif isrepeat and love.keyboard.isDown("ctrl") and key == "t" then
 	elseif keys[key] then
    		table.insert(Emulator.eventQueue, {"key", keys[key]})
+		-- Hack to get around android bug
+		if love.system.getOS() == "Android" and #key == 1 and ChatAllowedCharacters[key:byte()] then
+			table.insert(Emulator.eventQueue, {"char", key})
+		end
    	end
 end
 
-function updateShortcut(name, key1, key2, cb)
+local function updateShortcut(name, key1, key2, cb)
 	if Emulator.actions[name] ~= nil then
 		if love.keyboard.isDown(key1) and love.keyboard.isDown(key2) then
 			if love.timer.getTime() - Emulator.actions[name] > 1 then
@@ -267,65 +294,53 @@ function updateShortcut(name, key1, key2, cb)
 	end
 end
 
-function love.update(dt)
+function Emulator:update(dt)
 	if _conf.lockfps > 0 then next_time = next_time + min_dt end
 	local now = love.timer.getTime()
 	if murder:pop() ~= nil then crash() end
-	if _conf.enableAPI_http == true then HttpRequest.checkRequests() end
+	if _conf.enableAPI_http then HttpRequest.checkRequests() end
 
 	updateShortcut("terminate", "ctrl", "t", function()
-			table.insert(Emulator.eventQueue, {"terminate"})
+			table.insert(self.eventQueue, {"terminate"})
 		end)
 	
-	for k, v in pairs(Emulator.actions.timers) do
+	for k, v in pairs(self.actions.timers) do
 		if now >= v then
-			table.insert(Emulator.eventQueue, {"timer", k})
-			Emulator.actions.timers[k] = nil
+			table.insert(self.eventQueue, {"timer", k})
+			self.actions.timers[k] = nil
 		end
 	end
 
-	for k, v in pairs(Emulator.actions.alarms) do
+	for k, v in pairs(self.actions.alarms) do
 		if v.day <= api.os.day() and v.time <= api.env.os.time() then
-			table.insert(Emulator.eventQueue, {"alarm", k})
-			Emulator.actions.alarms[k] = nil
+			table.insert(self.eventQueue, {"alarm", k})
+			self.actions.alarms[k] = nil
 		end
 	end
 
-	--MOUSE
-	if Emulator.mouse.isPressed then
+	-- Mouse
+	if self.mouse.isPressed then
     	local mouseX     = love.mouse.getX()
     	local mouseY     = love.mouse.getY()
     	local termMouseX = math_bind(math.floor( (mouseX - _conf.terminal_guiScale) / Screen.pixelWidth ) + 1,1,_conf.terminal_width)
     	local termMouseY = math_bind(math.floor( (mouseY - _conf.terminal_guiScale) / Screen.pixelHeight ) + 1,1,_conf.terminal_width)
-    	if (termMouseX ~= Emulator.mouse.lastTermX or termMouseY ~= Emulator.mouse.lastTermY)
+    	if (termMouseX ~= self.mouse.lastTermX or termMouseY ~= self.mouse.lastTermY)
 			and (mouseX > 0 and mouseX < Screen.sWidth and
 				mouseY > 0 and mouseY < Screen.sHeight) then
 
-        	Emulator.mouse.lastTermX = termMouseX
-       		Emulator.mouse.lastTermY = termMouseY
+        	self.mouse.lastTermX = termMouseX
+       		self.mouse.lastTermY = termMouseY
 
-        	table.insert (Emulator.eventQueue, { "mouse_drag", love.mouse.isDown( "r" ) and 2 or 1, termMouseX, termMouseY})
+        	table.insert (self.eventQueue, { "mouse_drag", love.mouse.isDown( "r" ) and 2 or 1, termMouseX, termMouseY})
     	end
     end
 
-    local currentClock = os.clock()
-
-    if #Emulator.eventQueue > 0 then
-		for k, v in pairs(Emulator.eventQueue) do
-			Emulator:resume(unpack(v))
+    if #self.eventQueue > 0 then
+		for k, v in pairs(self.eventQueue) do
+			self:resume(unpack(v))
 		end
-		Emulator.eventQueue = {}
+		self.eventQueue = {}
 	end
-end
-
-function love.draw()
-	local cur_time = love.timer.getTime()
-	if next_time <= cur_time then
-		next_time = cur_time
-		return
-	end
-	love.timer.sleep(next_time - cur_time)
-	_kbdcache = {}
 end
 
 function love.run()
@@ -358,12 +373,19 @@ function love.run()
 			end
 		end
 		
-        -- Update dt, as we'll be passing it to update
+        -- Update the FPS counter
 		love.timer.step()
 
 		-- Call update
-        love.update(dt) -- will pass 0 if love.timer is disabled
-		love.draw()
+        Emulator:update()
+		
+		local cur_time = love.timer.getTime()
+		if next_time <= cur_time then
+			next_time = cur_time
+		else
+			love.timer.sleep(next_time - cur_time)
+		end
+		_kbdcache = {}
 		
 		love.timer.sleep(0.001)
 		
