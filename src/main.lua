@@ -398,6 +398,15 @@ local function ui_aboutBox()
 	about.oText:SetText("CCLite by Gamax92. \n \n Credits: \n Sorroko: Original CCLite \n PixelToast: Fixes to CCLite \n #lua @ freenode: Code pieces \n #love @ OFTC: Support \n CC Devs: ComputerCraft \n Searge: Fernflower :P \n nikolairesokav: LoveFrames")
 end
 
+local function ui_openDataFolder()
+	if love.filesystem.isFused() then
+		love.system.openURL("file://"..love.filesystem.getAppdataDirectory().."/ccemu/data")
+	else
+		love.system.openURL("file://"..love.filesystem.getAppdataDirectory().."/love/ccemu/data")
+	end
+	--love.system.openURL("file://"..love.filesystem.getAppdataDirectory()..(love.filesystem.isFused() and "/ccemu/data") or "/love/ccemu/data")
+end
+
 function love.load()
 	if love.system.getOS() == "Android" then
 		love.keyboard.setTextInput(true)
@@ -443,6 +452,8 @@ function love.load()
 		name = "File",
 		options = {
 			{"Edit Config",ui_editConfig},
+			{},
+			{"Open data folder", ui_openDataFolder},
 			{},
 			{"Exit",function() love.event.quit() end}
 		}
