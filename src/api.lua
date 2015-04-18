@@ -374,6 +374,17 @@ function api.init(Computer,color,id)
 		setfenv(f, tmpapi.env)
 		return f, err
 	end
+	function tmpapi.inext(tbl, key)
+		if type(tbl) ~= "table" then
+			error("bad argument: table expected, got " .. type(tbl),2)
+		elseif type(key) ~= "number" then
+			error("bad argument: int expected, got " .. type(key),2)
+		end
+		key = math.floor(key)+1
+		if key == key and tbl[key] ~= nil then
+			return key, tbl[key]
+		end
+	end
 
 	tmpapi.term = {}
 	function tmpapi.term.clear()
@@ -1196,15 +1207,14 @@ function api.init(Computer,color,id)
 			return a+rnextInt(b+1-a)
 		end
 	end
-	function tmpapi.math.trunc(num)
-	
-	end
+	tmpapi.math.pi = 3.1415927
 
 	_tostring_DB[coroutine.create] = nil
 	_tostring_DB[string.gmatch] = "gmatch" -- what ...
 	_tostring_DB[tmpapi.tostring] = "tostring"
 	_tostring_DB[tmpapi.tonumber] = "tonumber"
 	_tostring_DB[tmpapi.loadstring] = "loadstring"
+	_tostring_DB[tmpapi.inext] = "__inext"
 	_tostring_DB[tmpapi.math.random] = "random"
 	_tostring_DB[tmpapi.math.randomseed] = "randomseed"
 	_tostring_DB[tmpapi.getfenv] = "getfenv"
@@ -1213,6 +1223,7 @@ function api.init(Computer,color,id)
 	tmpapi.math.randomseed(math.random(0,0xFFFFFFFFFFFF))
 	tmpapi.env = {
 		_VERSION = "Luaj-jse 2.0.3",
+		__inext = tmpapi.inext,
 		tostring = tmpapi.tostring,
 		tonumber = tmpapi.tonumber,
 		unpack = unpack,
