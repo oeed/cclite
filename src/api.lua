@@ -373,7 +373,7 @@ end
 function api.term.setTextColor(...)
 	local num = ...
 	if type(num) ~= "number" or select("#",...) ~= 1 then error("Expected number",2) end
-	if num < 1 or num >= 65536 then
+	if num < 1 or num >= 65536 or num ~= num then
 		error("Colour out of range",2)
 	end
 	num = 2^math.floor(math.log(num)/math.log(2))
@@ -383,7 +383,7 @@ end
 function api.term.setBackgroundColor(...)
 	local num = ...
 	if type(num) ~= "number" or select("#",...) ~= 1 then error("Expected number",2) end
-	if num < 1 or num >= 65536 then
+	if num < 1 or num >= 65536 or num ~= num then
 		error("Colour out of range",2)
 	end
 	num = 2^math.floor(math.log(num)/math.log(2))
@@ -524,14 +524,14 @@ if _conf.enableAPI_http then
 	end
 	function api.http.request(sUrl, sParams)
 		if type(sUrl) ~= "string" then
-			error("String expected" .. (sUrl == nil and ", got nil" or ""),2)
+			error("Expected string",2)
 		end
 		local goodUrl = string_trim(sUrl)
 		if goodUrl:sub(1,4) == "ftp:" or goodUrl:sub(1,5) == "file:" or goodUrl:sub(1,7) == "mailto:" then
-			error("URL not http",2)
+			return false, "URL not http"
 		end
 		if goodUrl:sub(1,5) ~= "http:" and goodUrl:sub(1,6) ~= "https:" then
-			error("URL malformed",2)
+			return false, "URL malformed"
 		end
 		local http = HttpRequest.new()
 		local method = sParams and "POST" or "GET"
@@ -567,7 +567,8 @@ function api.os.day()
 	return math.floor(os.clock()/1200)
 end
 function api.os.setComputerLabel(label)
-	if type(label) ~= "string" and type(label) ~= "nil" then error("Expected string or nil",2) end
+	if type(label) ~= "string" and type(label) ~= "nil" and type(label) ~= "function" then error("Expected string or nil",2) end
+	if type(label) == "function" then label = nil end
 	Emulator.state.label = label
 end
 function api.os.getComputerLabel()
@@ -577,36 +578,38 @@ function api.os.queueEvent(event, ...)
 	if type(event) ~= "string" then error("Expected string",2) end
 	table.insert(Emulator.eventQueue, {event, ...})
 end
-function api.os.startTimer(...)
-	local nTimeout = ...
-	if type(nTimeout) ~= "number" or select("#",...) ~= 1 then error("Expected number",2) end
+function api.os.startTimer(nTimeout)
+	if type(nTimeout) ~= "number" then error("Expected number",2) end
 	nTimeout = math.ceil(nTimeout*20)/20
 	if nTimeout < 0.05 then nTimeout = 0.05 end
-	Emulator.actions.lastTimer = Emulator.actions.lastTimer + 1
 	Emulator.actions.timers[Emulator.actions.lastTimer] = math.floor(love.timer.getTime()*20)/20 + nTimeout
-	return Emulator.actions.lastTimer
+	Emulator.actions.lastTimer = Emulator.actions.lastTimer + 1
+	return Emulator.actions.lastTimer-1
 end
-function api.os.setAlarm(...)
-	local nTime = ...
-	if type(nTime) ~= "number" or select("#",...) ~= 1 then error("Expected number",2) end
+function api.os.setAlarm(nTime)
+	if type(nTime) ~= "number" then error("Expected number",2) end
 	if nTime < 0 or nTime > 24 then
-		error("Number out of range: " .. tostring(nTime))
+		error("Number out of range",2)
 	end
 	local alarm = {
 		time = nTime,
 		day = api.os.day() + (nTime < api.os.time() and 1 or 0)
 	}
-	Emulator.actions.lastAlarm = Emulator.actions.lastAlarm + 1
 	Emulator.actions.alarms[Emulator.actions.lastAlarm] = alarm
-	return Emulator.actions.lastAlarm
+	Emulator.actions.lastAlarm = Emulator.actions.lastAlarm + 1
+	return Emulator.actions.lastAlarm-1
 end
 function api.os.cancelTimer(id)
 	if type(id) ~= "number" then error("Expected number",2) end
-	Emulator.actions.timers[id] = nil
+	if id == id then
+		Emulator.actions.timers[id] = nil
+	end
 end
 function api.os.cancelAlarm(id)
 	if type(id) ~= "number" then error("Expected number",2) end
-	Emulator.actions.alarms[id] = nil
+	if id == id then
+		Emulator.actions.alarms[id] = nil
+	end
 end
 function api.os.shutdown()
 	Emulator:stop(false)
@@ -631,7 +634,13 @@ function api.peripheral.getMethods(sSide)
 	return
 end
 function api.peripheral.call(sSide, sMethod, ...)
-	if type(sSide) ~= "string" or type(sMethod) ~= "string" then error("Expected string, string",2) end
+	if type(sSide) ~= "string" or type(sMethod) ~= "string" then
+		if sSide == nil or type(sMethod) ~= "string" then
+			error("Expected string, string",2)
+		else
+			error("Expected string",2)
+		end
+	end
 	if not Emulator.state.peripherals[sSide] then error("No peripheral attached",2) end
 	if not Emulator.state.peripherals[sSide].cache[sMethod] then
 		error("No such method " .. sMethod,2)
@@ -733,6 +742,7 @@ function api.fs.find(...)
 	recurse_spec(results, '', spec)
 	return results
 end
+local fsmodes = {r=FileReadHandle, rb=FileBinaryReadHandle, w=FileWriteHandle, a=FileWriteHandle, wb=FileBinaryWriteHandle, ab=FileBinaryWriteHandle}
 function api.fs.open(...)
 	local path, mode = ...
 	if type(path) ~= "string" or type(mode) ~= "string" or select("#",...) ~= 2 then
@@ -742,19 +752,12 @@ function api.fs.open(...)
 	path = cleanPath(path)
 	if path == ".." or path:sub(1,3) == "../" then error("Invalid Path",2) end
 
+	local fsfunc = fsmodes[mode]
+	if fsfunc == nil then error("Unsupported mode",2) end
+
 	if vfs.isDirectory(path) then return end
 
-	if mode == "r" then
-		return FileReadHandle(path)
-	elseif mode == "rb" then
-		return FileBinaryReadHandle(path)
-	elseif mode == "w" or mode == "a" then
-		return FileWriteHandle(path,mode == "a")
-	elseif mode == "wb" or mode == "ab" then
-		return FileBinaryWriteHandle(path,mode == "ab")
-	else
-		error("Unsupported mode",2)
-	end
+	return fsfunc(path, mode == "a" or mode == "ab")
 end
 function api.fs.list(...)
 	local path = ...
@@ -1025,6 +1028,8 @@ function api.redstone.setAnalogOutput(side, strength)
 		error("Expected string, number",2)
 	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
+	elseif strength <= -1 or strength >= 16 then
+		error("Expected number in range 0-15",2)
 	end
 end
 function api.redstone.getAnalogOutput(side)
@@ -1048,6 +1053,8 @@ function api.redstone.setAnalogueOutput(side, strength)
 		error("Expected string, number",2)
 	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
+	elseif strength <= -1 or strength >= 16 then
+		error("Expected number in range 0-15",2)
 	end
 end
 function api.redstone.getAnalogueOutput(side)
@@ -1066,7 +1073,7 @@ function api.redstone.getBundledInput(side)
 	end
 	return 0
 end
-function api.redstone.getBundledOutput(sude)
+function api.redstone.getBundledOutput(side)
 	if type(side) ~= "string" then
 		error("Expected string",2)
 	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
@@ -1087,82 +1094,59 @@ function api.redstone.testBundledInput(side, color)
 	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
-	return color == 0
+	return color == 0 or color ~= color
 end
 
 api.bit = {}
+
+local function validateBitArg(arg)
+	if arg == nil or type(arg) == "function" then
+		error("too few arguments",3)
+	elseif type(arg) ~= "number" then
+		error("number expected",3)
+	elseif math.floor(arg) ~= arg then
+		error("passed number is not an integer",3)
+	elseif arg > 0xFFFFFFFF then
+		error("number is too large (maximum allowed: 2^32-1)",3)
+	end
+end
+
 function api.bit.norm(val)
 	while val < 0 do val = val + 4294967296 end
 	return val
 end
 function api.bit.blshift(n, bits)
-	if (type(n) ~= "number" and type(n) ~= "nil") or (type(bits) ~= "number" and type(bits) ~= "nil") then
-		error("number expected",2)
-	elseif n == nil or bits == nil then
-		error("too few arguments",2)
-	elseif n > 0xFFFFFFFF or bits > 0xFFFFFFFF then
-		error("number is too large (maximum allowed: 2^32-1)",2)
-	end
+	validateBitArg(n)
+	validateBitArg(bits)
 	return api.bit.norm(bit.lshift(n, bits))
 end
 function api.bit.brshift(n, bits)
-	if (type(n) ~= "number" and type(n) ~= "nil") or (type(bits) ~= "number" and type(bits) ~= "nil") then
-		error("number expected",2)
-	elseif n == nil or bits == nil then
-		error("too few arguments",2)
-	elseif n > 0xFFFFFFFF or bits > 0xFFFFFFFF then
-		error("number is too large (maximum allowed: 2^32-1)",2)
-	end
+	validateBitArg(n)
+	validateBitArg(bits)
 	return api.bit.norm(bit.arshift(n, bits))
 end
 function api.bit.blogic_rshift(n, bits)
-	if (type(n) ~= "number" and type(n) ~= "nil") or (type(bits) ~= "number" and type(bits) ~= "nil") then
-		error("number expected",2)
-	elseif n == nil or bits == nil then
-		error("too few arguments",2)
-	elseif n > 0xFFFFFFFF or bits > 0xFFFFFFFF then
-		error("number is too large (maximum allowed: 2^32-1)",2)
-	end
+	validateBitArg(n)
+	validateBitArg(bits)
 	return api.bit.norm(bit.rshift(n, bits))
 end
 function api.bit.bxor(m, n)
-	if (type(m) ~= "number" and type(m) ~= "nil") or (type(n) ~= "number" and type(n) ~= "nil") then
-		error("number expected",2)
-	elseif m == nil or n == nil then
-		error("too few arguments",2)
-	elseif m > 0xFFFFFFFF or n > 0xFFFFFFFF then
-		error("number is too large (maximum allowed: 2^32-1)",2)
-	end
+	validateBitArg(m)
+	validateBitArg(n)
 	return api.bit.norm(bit.bxor(m, n))
 end
 function api.bit.bor(m, n)
-	if (type(m) ~= "number" and type(m) ~= "nil") or (type(n) ~= "number" and type(n) ~= "nil") then
-		error("number expected",2)
-	elseif m == nil or n == nil then
-		error("too few arguments",2)
-	elseif m > 0xFFFFFFFF or n > 0xFFFFFFFF then
-		error("number is too large (maximum allowed: 2^32-1)",2)
-	end
+	validateBitArg(m)
+	validateBitArg(n)
 	return api.bit.norm(bit.bor(m, n))
 end
 function api.bit.band(m, n)
-	if (type(m) ~= "number" and type(m) ~= "nil") or (type(n) ~= "number" and type(n) ~= "nil") then
-		error("number expected",2)
-	elseif m == nil or n == nil then
-		error("too few arguments",2)
-	elseif m > 0xFFFFFFFF or n > 0xFFFFFFFF then
-		error("number is too large (maximum allowed: 2^32-1)",2)
-	end
+	validateBitArg(m)
+	validateBitArg(n)
 	return api.bit.norm(bit.band(m, n))
 end
 function api.bit.bnot(n)
-	if type(n) ~= "number" and type(n) ~= "nil" then
-		error("number expected",2)
-	elseif n == nil then
-		error("too few arguments",2)
-	elseif n > 0xFFFFFFFF then
-		error("number is too large (maximum allowed: 2^32-1)",2)
-	end
+	validateBitArg(n)
 	return api.bit.norm(bit.bnot(n))
 end
 
@@ -1228,6 +1212,15 @@ end
 function api.math.trunc(num)
 	
 end
+_tostring_DB[coroutine.create] = nil
+_tostring_DB[string.gmatch] = "gmatch" -- what ...
+_tostring_DB[api.tostring] = "tostring"
+_tostring_DB[api.tonumber] = "tonumber"
+_tostring_DB[api.loadstring] = "loadstring"
+_tostring_DB[api.math.random] = "random"
+_tostring_DB[api.math.randomseed] = "randomseed"
+_tostring_DB[api.getfenv] = "getfenv"
+_tostring_DB[api.error] = "error"
 
 function api.init() -- Called after this file is loaded! Important. Else api.x is not defined
 	api.math.randomseed(math.random(0,0xFFFFFFFFFFFF))
