@@ -313,6 +313,17 @@ function api.loadstring(str, source)
 	setfenv(f, api.env)
 	return f, err
 end
+function api.inext(tbl, key)
+	if type(tbl) ~= "table" then
+		error("bad argument: table expected, got " .. type(tbl),2)
+	elseif type(key) ~= "number" then
+		error("bad argument: int expected, got " .. type(key),2)
+	end
+	key = math.floor(key)+1
+	if key == key and tbl[key] ~= nil then
+		return key, tbl[key]
+	end
+end
 
 api.term = {}
 function api.term.clear()
@@ -1209,14 +1220,14 @@ function api.math.random(a,b)
 		return a+rnextInt(b+1-a)
 	end
 end
-function api.math.trunc(num)
-	
-end
+api.math.pi = 3.1415927
+
 _tostring_DB[coroutine.create] = nil
 _tostring_DB[string.gmatch] = "gmatch" -- what ...
 _tostring_DB[api.tostring] = "tostring"
 _tostring_DB[api.tonumber] = "tonumber"
 _tostring_DB[api.loadstring] = "loadstring"
+_tostring_DB[api.inext] = "__inext"
 _tostring_DB[api.math.random] = "random"
 _tostring_DB[api.math.randomseed] = "randomseed"
 _tostring_DB[api.getfenv] = "getfenv"
@@ -1226,6 +1237,7 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 	api.math.randomseed(math.random(0,0xFFFFFFFFFFFF))
 	api.env = {
 		_VERSION = "Luaj-jse 2.0.3",
+		__inext = api.inext,
 		tostring = api.tostring,
 		tonumber = api.tonumber,
 		unpack = unpack,
@@ -1354,7 +1366,6 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 	end
 	api.env.rs = api.env.redstone
 	api.env.math.mod = nil
-	api.env.math.trunc = nil
 	api.env.string.gfind = nil
 	api.env._G = api.env
 end
