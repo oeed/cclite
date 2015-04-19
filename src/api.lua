@@ -1,3 +1,20 @@
+local real_error = error
+local function error(str,level)
+	if level == nil then level = 1 end
+	if type(level) ~= "number" then
+		real_error("bad argument: int expected, got " .. type(level),2)
+	end
+	if level <= 0 then
+		level = -2
+	end
+	str = str == nil and "" or tostring(str)
+	local info = debug.getinfo(level+1)
+	if info ~= nil then
+		str = (info.source == "=[C]" and info.name or info.short_src .. ":" .. info.currentline) .. ": " .. str
+	end
+	real_error(str,-1)
+end
+
 -- HELPER FUNCTIONS
 local function lines(str)
 	str=str:gsub("\r\n","\n"):gsub("\r","\n"):gsub("\n$","").."\n"
@@ -280,20 +297,6 @@ function api.getfenv(level)
 	end
 	return env
 end
-function api.error(str,level)
-	level = level or 1
-	if type(level) ~= "number" then
-		error("bad argument #2: number expected, got " .. type(level),2)
-	end
-	if level == 0 then
-		level = -1 -- Prevent defect caused by this error fix.
-	end
-	local info = debug.getinfo(level+1)
-	if info ~= nil and info.source == "=[C]" and level >= 1 then
-		str = info.name .. ": " .. tostring(str)
-	end
-	error(str,level+1)
-end
 function api.loadstring(str, source)
 	source = source or "string"
 	if type(str) ~= "string" and type(str) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
@@ -307,6 +310,10 @@ function api.loadstring(str, source)
 	if f == nil then
 		-- Get the normal error message
 		local _, err = loadstring(str, source)
+		local info = debug.getinfo(2)
+		if info ~= nil then
+			err = (info.source == "=[C]" and info.name or info.short_src .. ":" .. info.currentline) .. ": " .. err
+		end
 		return f, err
 	end
 	jit.off(f) -- Required for "Too long without yielding"
@@ -1112,13 +1119,13 @@ api.bit = {}
 
 local function validateBitArg(arg)
 	if arg == nil or type(arg) == "function" then
-		error("too few arguments",3)
+		real_error("Java Exception Thrown: java.lang.IllegalArgumentException: too few arguments",-1)
 	elseif type(arg) ~= "number" then
-		error("number expected",3)
+		real_error("Java Exception Thrown: java.lang.IllegalArgumentException: number expected",-1)
 	elseif math.floor(arg) ~= arg or arg == math.huge or arg == -math.huge then
-		error("passed number is not an integer",3)
+		real_error("Java Exception Thrown: java.lang.IllegalArgumentException: passed number is not an integer",-1)
 	elseif arg > 0xFFFFFFFF then
-		error("number is too large (maximum allowed: 2^32-1)",3)
+		real_error("Java Exception Thrown: java.lang.IllegalArgumentException: number is too large (maximum allowed: 2^32-1)",-1)
 	end
 end
 
@@ -1231,7 +1238,7 @@ _tostring_DB[api.inext] = "__inext"
 _tostring_DB[api.math.random] = "random"
 _tostring_DB[api.math.randomseed] = "randomseed"
 _tostring_DB[api.getfenv] = "getfenv"
-_tostring_DB[api.error] = "error"
+_tostring_DB[error] = "error"
 
 function api.init() -- Called after this file is loaded! Important. Else api.x is not defined
 	api.math.randomseed(math.random(0,0xFFFFFFFFFFFF))
@@ -1252,7 +1259,7 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 		type = type,
 		select = select,
 		assert = assert,
-		error = api.error,
+		error = error,
 		ipairs = ipairs,
 		pairs = pairs,
 		pcall = pcall,
