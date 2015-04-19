@@ -11,7 +11,7 @@ os.shutdown = nil
 os.reboot = nil
 redstone = nil
 
-local vals = {true,false,-1,0,1,0/0,"sjdikiekfs","left",function() end,{"hi"}}
+local vals = {true,false,-math.huge,-2^32,-1,0,1,2^32,math.huge,0/0,"sjdikiekfs","left",function() end,{"hi"}}
 
 local egt
 function egt(tab,ext)
@@ -24,7 +24,7 @@ function egt(tab,ext)
 		local k = keys[j]
 		local v = tab[k]
 		local str = ext .. (ext == "" and "" or ".") .. k
-		if tostring(v) ~= k and type(v) == "function" then
+		if tostring(v) ~= k and type(v) == "function" and v ~= coroutine.create then
 			local tests = {1,1,1}
 			while true do
 				file.write(str .. "(")
@@ -79,6 +79,9 @@ end
 egt(_G,"")
 file.write("Done!\n")
 file.close()
+term.setTextColor(1)
+term.setBackgroundColor(32768)
+term.setCursorPos(1,1)
 term.write("Done\n")
 while true do
 	coroutine.yield()
