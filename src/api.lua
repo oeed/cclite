@@ -145,7 +145,7 @@ local function validateBitArg(arg)
 		error("too few arguments",3)
 	elseif type(arg) ~= "number" then
 		error("number expected",3)
-	elseif math.floor(arg) ~= arg then
+	elseif math.floor(arg) ~= arg or arg == math.huge or arg == -math.huge then
 		error("passed number is not an integer",3)
 	elseif arg > 0xFFFFFFFF then
 		error("number is too large (maximum allowed: 2^32-1)",3)
