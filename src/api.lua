@@ -609,8 +609,8 @@ function api.os.day()
 	return math.floor((love.timer.getTime()-Computer.state.startTime)/1200)
 end
 function api.os.setComputerLabel(label)
-	if type(label) ~= "string" and type(label) ~= "nil" and type(label) ~= "function" then error("Expected string or nil",2) end
 	if type(label) == "function" then label = nil end
+	if type(label) ~= "string" and type(label) ~= "nil" then error("Expected string or nil",2) end
 	Computer.state.label = label
 end
 function api.os.getComputerLabel()
