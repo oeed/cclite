@@ -116,20 +116,12 @@ local function string_trim(s)
 end
 
 local function cleanPath(path,wildcard)
-	local path = path:gsub("\\", "/")
-
-	local cleanName = ""
-	for i = 1,#path do
-		local c = path:byte(i,i)
-		if c >= 32 and c ~= 34 and c ~= 58 and c ~= 60 and c ~= 62 and c ~= 63 and c ~= 124 and (wildcard or c ~= 42) then
-			cleanName = cleanName .. string.char(c)
-		end
-	end
+	local path = path:gsub("\\", "/"):gsub("[\":<>%?|" .. (wildcard and "" or "%*") .. "]","")
 
 	local tPath = {}
-	for part in cleanName:gmatch("[^/]+") do
+	for part in path:gmatch("[^/]+") do
    		if part ~= "" and part ~= "." then
-   			if part == ".." and #tPath > 0 and tPath[1] ~= ".." then
+   			if part == ".." and #tPath > 0 and tPath[#tPath] ~= ".." then
    				table.remove(tPath)
    			else
    				table.insert(tPath, part:sub(1,255))
@@ -668,10 +660,10 @@ function api.init(Computer,color,id)
 		return tonumber(string.format("%0.2f",math.floor(love.timer.getTime()*20)/20 - Computer.state.startTime))
 	end
 	function api.os.time()
-		return math.floor((os.clock()*0.02)%24*1000)/1000
+		return math.floor(((love.timer.getTime()-Emulator.startTime)*0.02)%24*1000)/1000
 	end
 	function api.os.day()
-		return math.floor(os.clock()/1200)
+		return math.floor((love.timer.getTime()-Emulator.startTime)/1200)
 	end
 	function api.os.getComputerID()
 		return id
@@ -996,9 +988,9 @@ function api.init(Computer,color,id)
 			error("Expected string, string",2)
 		end
 
-		fromPath = cleanPath(fromPath, false)
+		fromPath = cleanPath(fromPath)
 		if fromPath == ".." or fromPath:sub(1,3) == "../" then error("Invalid Path",2) end
-		toPath = cleanPath(toPath, false)
+		toPath = cleanPath(toPath)
 		if toPath == ".." or toPath:sub(1,3) == "../" then error("Invalid Path",2) end
 
 		if fromPath == "rom" or fromPath:sub(1, 4) == "rom/" or
@@ -1022,9 +1014,9 @@ function api.init(Computer,color,id)
 			error("Expected string, string",2)
 		end
 
-		fromPath = cleanPath(fromPath, false)
+		fromPath = cleanPath(fromPath)
 		if fromPath == ".." or fromPath:sub(1,3) == "../" then error("Invalid Path",2) end
-		toPath = cleanPath(toPath, false)
+		toPath = cleanPath(toPath)
 		if toPath == ".." or toPath:sub(1,3) == "../" then error("Invalid Path",2) end
 
 		if toPath == "rom" or toPath:sub(1, 4) == "rom/" then

@@ -227,6 +227,7 @@ end
 
 Emulator = {}
 Emulator.computers = {}
+Emulator.startTime = love.timer.getTime()
 
 local L2DScreenW, L2DScreenH = 800, 600
 function love.resize(w, h)
