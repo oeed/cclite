@@ -39,7 +39,7 @@ function peripheral.base.diskDrive(sSide)
 		elseif sMethod == "stopAudio" then
 		elseif sMethod == "ejectDisk" then
 			if content.type ~= "" then
-				table.insert(Emulator.eventQueue, {"disk_eject", side})
+				table.insert(Computer.eventQueue, {"disk_eject", side})
 				if content.type == "data" then
 					vfs.unmount(content.mount)
 				end
@@ -85,7 +85,7 @@ function peripheral.base.diskDrive(sSide)
 					vfs.mount("/disk/" .. nID, "/disk", side)
 					content.mount = "disk"
 				end
-				table.insert(Emulator.eventQueue, {"disk", side})
+				table.insert(Computer.eventQueue, {"disk", side})
 			elseif sType == "audio" then
 				if type(sLabel) ~= "string" then error("Expected string, string",2) end
 				content = {type = "audio", title = sLabel}

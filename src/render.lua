@@ -131,7 +131,7 @@ end
 
 function Screen:draw()
 	-- Render terminal
-	if not Emulator.running then
+	if not Computer.running then
 		setColor(COLOUR_FULL_BLACK)
 		ldrawRect("fill", 0, 0, self.sWidth, self.sHeight)
 	else
@@ -164,9 +164,9 @@ function Screen:draw()
 		end
 
 		-- Render cursor
-		if Emulator.state.blink and self.showCursor then
-			setColor(COLOUR_CODE[Emulator.state.fg])
-			lprint("_", (Emulator.state.cursorX - 1) * self.pixelWidth + tOffset["_"] + _conf.terminal_guiScale, (Emulator.state.cursorY - 1) * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
+		if Computer.state.blink and self.showCursor then
+			setColor(COLOUR_CODE[Computer.state.fg])
+			lprint("_", (Computer.state.cursorX - 1) * self.pixelWidth + tOffset["_"] + _conf.terminal_guiScale, (Computer.state.cursorY - 1) * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 		end
 	end
 
@@ -178,7 +178,7 @@ function Screen:draw()
 	end
 
 	if _conf.cclite_showFPS then
-		drawMessage("FPS: " .. Emulator.FPS, self.sWidth - (49 * _conf.terminal_guiScale), _conf.terminal_guiScale * 2)
+		drawMessage("FPS: " .. Computer.FPS, self.sWidth - (49 * _conf.terminal_guiScale), _conf.terminal_guiScale * 2)
 	end
 	if _conf.mobileMode then
 		local radius = 20 * _conf.terminal_guiScale

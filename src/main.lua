@@ -236,7 +236,7 @@ local function math_bind(val,lower,upper)
 	return math.min(math.max(val,lower),upper)
 end
 
-Emulator = {
+Computer = {
 	running = false,
 	reboot = false, -- Tells update loop to start Emulator automatically
 	blockInput = false,
@@ -270,7 +270,7 @@ Emulator = {
 	FPS = love.timer.getFPS(),
 }
 
-function Emulator:start()
+function Computer:start()
 	self.reboot = false
 	for y = 1, _conf.terminal_height do
 		local screen_textB = Screen.textB[y]
@@ -282,12 +282,12 @@ function Emulator:start()
 	end
 	Screen.dirty = true
 	api.init()
-	Emulator.state.cursorX = 1
-	Emulator.state.cursorY = 1
-	Emulator.state.bg = 32768
-	Emulator.state.fg = 1
-	Emulator.state.blink = false
-	Emulator.state.startTime = math.floor(love.timer.getTime()*20)/20
+	Computer.state.cursorX = 1
+	Computer.state.cursorY = 1
+	Computer.state.bg = 32768
+	Computer.state.fg = 1
+	Computer.state.blink = false
+	Computer.state.startTime = math.floor(love.timer.getTime()*20)/20
 
 	local fn, err = loadstring(love.filesystem.read("/lua/bios.lua"),"@bios")
 
@@ -303,7 +303,7 @@ function Emulator:start()
 	self:resume({})
 end
 
-function Emulator:stop(reboot)
+function Computer:stop(reboot)
 	for k,v in pairs(self.actions.sockets) do
 		if v.volitile then
 			if v.onClose then
@@ -330,14 +330,14 @@ function Emulator:stop(reboot)
 	self.eventQueue = {}
 end
 
-function Emulator:resume(...)
+function Computer:resume(...)
 	if not self.running then return end
 	debug.sethook(self.proc,function() error("Too long without yielding",2) end,"",9e7)
 	local ok, err = coroutine.resume(self.proc, ...)
 	debug.sethook(self.proc)
-	if not self.proc then return end -- Emulator:stop could be called within the coroutine resulting in proc being nil
+	if not self.proc then return end -- Computer:stop could be called within the coroutine resulting in proc being nil
 	if coroutine.status(self.proc) == "dead" then -- Which could cause an error here
-		Emulator:stop()
+		Computer:stop()
 	end
 	if not ok then
 		print(err) -- Bios was unable to handle error
@@ -403,12 +403,12 @@ function love.load()
 	
 	love.keyboard.setKeyRepeat(true)
 
-	Emulator:start()
+	Computer:start()
 end
 
 function love.mousereleased(x, y, _button)
 	if x > 0 and x < Screen.sWidth and y > 0 and y < Screen.sHeight then -- Within screen bounds.
-		Emulator.mouse.isPressed = false
+		Computer.mouse.isPressed = false
 	end
 end
 
@@ -418,33 +418,33 @@ function love.mousepressed(x, y, button)
 			if ((x - controlPad.x)^2 + (y - controlPad.y)^2 < controlPad.r^2) then
 				-- Click on control pad
 				if y <= controlPad.y - (controlPad.r / 2.5) then
-					table.insert(Emulator.eventQueue, {"key",keys[_conf.ctrlPad.top]})
+					table.insert(Computer.eventQueue, {"key",keys[_conf.ctrlPad.top]})
 					if #_conf.ctrlPad.top == 1 and ChatAllowedCharacters[_conf.ctrlPad.top:byte()] then
-						table.insert(Emulator.eventQueue, {"char", _conf.ctrlPad.top})
+						table.insert(Computer.eventQueue, {"char", _conf.ctrlPad.top})
 					end
 				end
 				if y >= controlPad.y + (controlPad.r / 2.5) then
-					table.insert(Emulator.eventQueue, {"key",keys[_conf.ctrlPad.bottom]})
+					table.insert(Computer.eventQueue, {"key",keys[_conf.ctrlPad.bottom]})
 					if #_conf.ctrlPad.bottom == 1 and ChatAllowedCharacters[_conf.ctrlPad.bottom:byte()] then
-						table.insert(Emulator.eventQueue, {"char", _conf.ctrlPad.bottom})
+						table.insert(Computer.eventQueue, {"char", _conf.ctrlPad.bottom})
 					end
 				end
 				if x <= controlPad.x - (controlPad.r / 2.5) then
-					table.insert(Emulator.eventQueue, {"key",keys[_conf.ctrlPad.left]})
+					table.insert(Computer.eventQueue, {"key",keys[_conf.ctrlPad.left]})
 					if #_conf.ctrlPad.left == 1 and ChatAllowedCharacters[_conf.ctrlPad.left:byte()] then
-						table.insert(Emulator.eventQueue, {"char", _conf.ctrlPad.left})
+						table.insert(Computer.eventQueue, {"char", _conf.ctrlPad.left})
 					end
 				end
 				if x >= controlPad.x + (controlPad.r / 2.5) then
-					table.insert(Emulator.eventQueue, {"key",keys[_conf.ctrlPad.right]})
+					table.insert(Computer.eventQueue, {"key",keys[_conf.ctrlPad.right]})
 					if #_conf.ctrlPad.right == 1 and ChatAllowedCharacters[_conf.ctrlPad.right:byte()] then
-						table.insert(Emulator.eventQueue, {"char", _conf.ctrlPad.right})
+						table.insert(Computer.eventQueue, {"char", _conf.ctrlPad.right})
 					end
 				end
 				if ((x - controlPad.x)^2 + (y - controlPad.y)^2 < (controlPad.r / 2.5)^2) then
-					table.insert(Emulator.eventQueue, {"key",keys[_conf.ctrlPad.center]})
+					table.insert(Computer.eventQueue, {"key",keys[_conf.ctrlPad.center]})
 					if #_conf.ctrlPad.center == 1 and ChatAllowedCharacters[_conf.ctrlPad.center:byte()] then
-						table.insert(Emulator.eventQueue, {"char", _conf.ctrlPad.center})
+						table.insert(Computer.eventQueue, {"char", _conf.ctrlPad.center})
 					end
 				end
 			end
@@ -453,48 +453,48 @@ function love.mousepressed(x, y, button)
 			local termMouseY = math_bind(math.floor((y - _conf.terminal_guiScale) / Screen.pixelHeight) + 1,1,_conf.terminal_height)
 
 			if button == "l" or button == "m" or button == "r" then
-				Emulator.mouse.isPressed = true
-				Emulator.mouse.lastTermX = termMouseX
-				Emulator.mouse.lastTermY = termMouseY
+				Computer.mouse.isPressed = true
+				Computer.mouse.lastTermX = termMouseX
+				Computer.mouse.lastTermY = termMouseY
 				if button == "l" then button = 1
 				elseif button == "m" then button = 3
 				elseif button == "r" then button = 2
 				end
-				table.insert(Emulator.eventQueue, {"mouse_click", button, termMouseX, termMouseY})
+				table.insert(Computer.eventQueue, {"mouse_click", button, termMouseX, termMouseY})
 			elseif button == "wu" then -- Scroll up
-				table.insert(Emulator.eventQueue, {"mouse_scroll", -1, termMouseX, termMouseY})
+				table.insert(Computer.eventQueue, {"mouse_scroll", -1, termMouseX, termMouseY})
 			elseif button == "wd" then -- Scroll down
-				table.insert(Emulator.eventQueue, {"mouse_scroll", 1, termMouseX, termMouseY})
+				table.insert(Computer.eventQueue, {"mouse_scroll", 1, termMouseX, termMouseY})
 			end
 		end
 	end
 end
 
 function love.textinput(unicode)
-	if not Emulator.blockInput then
+	if not Computer.blockInput then
 		-- Hack to get around android bug
 		if love.system.getOS() == "Android" and keys[unicode] ~= nil then
-			table.insert(Emulator.eventQueue, {"key", keys[unicode]})
+			table.insert(Computer.eventQueue, {"key", keys[unicode]})
 		end
 		if ChatAllowedCharacters[unicode:byte()] then
-			table.insert(Emulator.eventQueue, {"char", unicode})
+			table.insert(Computer.eventQueue, {"char", unicode})
 		end
 	end
 end
 
 function love.keypressed(key, isrepeat)
 	if love.keyboard.isDown("ctrl") and not isrepeat then
-		if Emulator.actions.terminate == nil    and key == "t" then
-			Emulator.actions.terminate = love.timer.getTime()
-		elseif Emulator.actions.shutdown == nil and key == "s" then
-			Emulator.actions.shutdown =  love.timer.getTime()
-		elseif Emulator.actions.reboot == nil   and key == "r" then
-			Emulator.actions.reboot =    love.timer.getTime()
+		if Computer.actions.terminate == nil    and key == "t" then
+			Computer.actions.terminate = love.timer.getTime()
+		elseif Computer.actions.shutdown == nil and key == "s" then
+			Computer.actions.shutdown =  love.timer.getTime()
+		elseif Computer.actions.reboot == nil   and key == "r" then
+			Computer.actions.reboot =    love.timer.getTime()
 		end
 	else -- Ignore key shortcuts before "press any key" action. TODO: This might be slightly buggy!
-		if not Emulator.running and not isrepeat then
-			Emulator:start()
-			Emulator.blockInput = true
+		if not Computer.running and not isrepeat then
+			Computer:start()
+			Computer.blockInput = true
 			return
 		end
 	end
@@ -506,13 +506,13 @@ function love.keypressed(key, isrepeat)
 		if nloc > 0 then
 			cliptext = cliptext:sub(1, nloc - 1)
 		end
-		table.insert(Emulator.eventQueue, {"paste", cliptext})
+		table.insert(Computer.eventQueue, {"paste", cliptext})
 	elseif isrepeat and love.keyboard.isDown("ctrl") and (key == "t" or key == "s" or key == "r") then
 	elseif keys[key] then
-		table.insert(Emulator.eventQueue, {"key", keys[key]})
+		table.insert(Computer.eventQueue, {"key", keys[key]})
 		-- Hack to get around android bug
 		if love.system.getOS() == "Android" and #key == 1 and ChatAllowedCharacters[key:byte()] then
-			table.insert(Emulator.eventQueue, {"char", key})
+			table.insert(Computer.eventQueue, {"char", key})
 		end
 	end
 end
@@ -531,19 +531,19 @@ end
 ]]
 
 local function updateShortcut(name, key1, key2, cb)
-	if Emulator.actions[name] ~= nil then
+	if Computer.actions[name] ~= nil then
 		if love.keyboard.isDown(key1) and love.keyboard.isDown(key2) then
-			if love.timer.getTime() - Emulator.actions[name] > 1 then
-				Emulator.actions[name] = nil
+			if love.timer.getTime() - Computer.actions[name] > 1 then
+				Computer.actions[name] = nil
 				if cb then cb() end
 			end
 		else
-			Emulator.actions[name] = nil
+			Computer.actions[name] = nil
 		end
 	end
 end
 
-function Emulator:update()
+function Computer:update()
 	if _conf.lockfps > 0 then next_time = next_time + min_dt end
 	local now = love.timer.getTime()
 	if _conf.enableAPI_http then HttpRequest.checkRequests() end
@@ -559,14 +559,14 @@ function Emulator:update()
 			self:stop(true)
 		end)
 
-	if Emulator.state.blink then
+	if Computer.state.blink then
 		if Screen.lastCursor == nil then
 			Screen.lastCursor = now
 		end
 		if now - Screen.lastCursor >= 0.25 then
 			Screen.showCursor = not Screen.showCursor
 			Screen.lastCursor = now
-			if Emulator.state.cursorY >= 1 and Emulator.state.cursorY <= _conf.terminal_height and Emulator.state.cursorX >= 1 and Emulator.state.cursorX <= _conf.terminal_width then
+			if Computer.state.cursorY >= 1 and Computer.state.cursorY <= _conf.terminal_height and Computer.state.cursorX >= 1 and Computer.state.cursorX <= _conf.terminal_width then
 				Screen.dirty = true
 			end
 		end
@@ -725,7 +725,7 @@ function love.run()
 		end
 
 		-- Call update and draw
-		Emulator:update()
+		Computer:update()
 		if not love.window.isVisible() then Screen.dirty = false end
 		if Screen.dirty then
 			Screen:draw()

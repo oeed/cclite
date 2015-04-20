@@ -131,7 +131,7 @@ function peripheral.base.socketModem(sSide)
 						svtmit(chan,rchan,res,cl)
 					end
 					print("< "..tonumber(chan)..","..tonumber(rchan)..":"..serialize(res))
-					table.insert(Emulator.eventQueue,{"modem_message",sSide,tonumber(chan),tonumber(rchan),res,100})
+					table.insert(Computer.eventQueue,{"modem_message",sSide,tonumber(chan),tonumber(rchan),res,100})
 				end
 			end
 		end
@@ -139,14 +139,14 @@ function peripheral.base.socketModem(sSide)
 	local function close()
 		if sv then
 			sv:close()
-			Emulator.actions.sockets[sv]=nil
+			Computer.actions.sockets[sv]=nil
 			for k,v in pairs(clients) do
-				Emulator.actions.sockets[k]=nil
+				Computer.actions.sockets[k]=nil
 			end
 			clients=nil
 		elseif cl then
 			cl:close()
-			Emulator.actions.sockets[cl]=nil
+			Computer.actions.sockets[cl]=nil
 		end
 	end
 	function obj.ccliteCall(sMethod,...)
@@ -157,12 +157,12 @@ function peripheral.base.socketModem(sSide)
 			error(err,2)
 			clients={}
 			sv:settimeout(0)
-			Emulator.actions.sockets[sv]={
+			Computer.actions.sockets[sv]={
 				server=true,
 				onAccept=function(cl)
 					clients[cl]=true
 					cl:settimeout(0)
-					Emulator.actions.sockets[cl]={
+					Computer.actions.sockets[cl]={
 						onRecv=function(txt)
 							recv(txt,cl)
 						end
@@ -176,7 +176,7 @@ function peripheral.base.socketModem(sSide)
 			cl,err=socket.connect(tArgs[1],tArgs[2])
 			error(err,2)
 			cl:settimeout(0)
-			Emulator.actions.sockets[cl]={
+			Computer.actions.sockets[cl]={
 				onRecv=function(txt)
 					recv(txt)
 				end
