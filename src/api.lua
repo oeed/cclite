@@ -341,14 +341,19 @@ function api.init(Computer,color,id)
 			if type(str) ~= "number" and type(str) ~= "string" then
 				error("bad argument: string expected, got " .. type(str),2)
 			else
-				str = tostring(str)
+				str = string_trim(tostring(str))
 			end
 		end
 		-- Fix some strings.
 		if type(str) == "string" and base >= 11 then
 			str = str:gsub("%[","4"):gsub("\\","5"):gsub("]","6"):gsub("%^","7"):gsub("_","8"):gsub("`","9")
 		end
-		return tonumber(str,base)
+		if base ~= 10 and str:sub(1,1) == "-" then
+			local tmpnum = tonumber(str:sub(2),base)
+			return (tmpnum ~= nil and str:sub(2,2) ~= "-") and -tmpnum or nil
+		else
+			return tonumber(str,base)
+		end
 	end
 	function api.getfenv(level)
 		if level == nil then level = 1 end
