@@ -6,9 +6,7 @@ Description:
 
 This is a ComputerCraft Emulator written in Love2D. It is not complete, and is still a work in progress.
 
-If you have installed Love2D you can just double click on the supplied cclite-latest-beta.love file to run it.
-
-Visit the [forum topic](http://www.computercraft.info/forums2/index.php?/topic/16823-cclite-computercraft-emulator/) for CCLite.
+Visit the [forum topic](http://www.computercraft.info/forums2/index.php?/topic/16823-cclite-computercraft-emulator/) for CCLite downloads.
 
 HTTPS Support:
 ----------------
@@ -50,7 +48,7 @@ I dunno. Try the ssl.so file on the binaries page.
 Screenshots:
 ------------
 
-![Demonstration](http://i.imgur.com/87PL9Nb.png)
+![Demonstration](http://i.imgur.com/VSCl7IN.png)
 
 NOTES:
 ------
@@ -62,12 +60,7 @@ TODO:
 
 Add in more error checking
 
-Make a functional virtual redstone system
-
 Make peripheralAttach only add valid sides
 
 Have virtual Disk Drives work with Treasure disks
 
-**Add in missing globals:**
-
-  * __inext
