@@ -221,6 +221,7 @@ local function FileBinaryWriteHandle(path, append)
 	return handle
 end
 
+local ffi=require("ffi")
 api = {}
 local _tostring_DB = {}
 local function addToDB(entry)
@@ -238,18 +239,37 @@ addToDB(coroutine)
 function api.tostring(...)
 	if select("#",...) == 0 then error("bad argument #1: value expected",2) end
 	local something = ...
-	if something == nil then return "nil" end
-	return _tostring_DB[something] or tostring(something)
+	local fix
+	if something == nil then
+		return "nil"
+	elseif type(something) == "number" then
+		if tonumber(ffi.cast("double",ffi.cast("signed long",something))) == something then
+			fix = tostring(ffi.cast("signed long", something)):match("(.*)U?LL")
+		else
+			fix = string.format("%.8G",something):gsub("E%+","E")
+		end
+		return fix
+	elseif type(something) == "table" then
+		fix = tostring(something):gsub("table: 0x","table: ")
+		return fix
+	elseif _tostring_DB[something] ~= nil then
+		return _tostring_DB[something]
+	elseif type(something) == "function" then
+		fix = tostring(something):gsub("function: 0x","function: ")
+		return fix
+	else
+		return tostring(something)
+	end
 end
 function api.tonumber(...)
 	local str, base = ...
 	if select("#",...) < 1 then
 		error("bad argument #1: value expected",2)
 	end
-	base = base or 10
+	if base == nil then base = 10 end
 	if (type(base) ~= "number" and type(base) ~= "string") or (type(base) == "string" and tonumber(base) == nil) then
 		if type(base) == "string" then
-			error("bad argument: number expected, got " .. type(base),2)
+			error("bad argument: number expected, got string",2)
 		end
 		error("bad argument: int expected, got " .. type(base),2)
 	end
@@ -266,17 +286,12 @@ function api.tonumber(...)
 	end
 	-- Fix some strings.
 	if type(str) == "string" and base >= 11 then
-		str = str:gsub("%[","4"):gsub("\\","5"):gsub("]","6"):gsub("%^","7"):gsub("_","8"):gsub(string.char(96),"9")
+		str = str:gsub("%[","4"):gsub("\\","5"):gsub("]","6"):gsub("%^","7"):gsub("_","8"):gsub("`","9")
 	end
-	if base ~= 10 and str:sub(1,1) == "-" then
-		local tmpnum = tonumber(str:sub(2),base)
-		return (tmpnum ~= nil and str:sub(2,2) ~= "-") and -tmpnum or nil
-	else
-		return tonumber(str,base)
-	end
+	return tonumber(str,base)
 end
 function api.getfenv(level)
-	level = level or 1
+	if level == nil then level = 1 end
 	if type(level) ~= "function" and type(level) ~= "number" then
 		error("bad argument: " .. (type(level) == "string" and "number" or "int") .. " expected, got " .. type(level),2)
 	end
@@ -298,9 +313,9 @@ function api.getfenv(level)
 	return env
 end
 function api.loadstring(str, source)
-	source = source or "string"
+	if source == nil then source = "string" end
 	if type(str) ~= "string" and type(str) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
-	if type(source) ~= "string" and type(source) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
+	if type(source) ~= "string" and type(source) ~= "number" then error("bad argument: String expected, got " .. type(str),2) end
 	local source2 = tostring(source)
 	local sSS = source2:sub(1,1)
 	if sSS == "@" or sSS == "=" then
@@ -1007,6 +1022,8 @@ function api.fs.delete(...)
 end
 
 api.redstone = {}
+local outputs = {top=0, bottom=0, left=0, right=0, front=0, back=0}
+local bundled = {top=0, bottom=0, left=0, right=0, front=0, back=0}
 function api.redstone.getSides()
 	return {"top","bottom","left","right","front","back"}
 end
@@ -1024,6 +1041,7 @@ function api.redstone.setOutput(side, value)
 	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
+	outputs[side] = value and 15 or 0
 end
 function api.redstone.getOutput(side)
 	if type(side) ~= "string" then
@@ -1031,7 +1049,7 @@ function api.redstone.getOutput(side)
 	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
-	return false
+	return outputs[side] > 0
 end
 function api.redstone.getAnalogInput(side)
 	if type(side) ~= "string" then
@@ -1049,6 +1067,7 @@ function api.redstone.setAnalogOutput(side, strength)
 	elseif strength <= -1 or strength >= 16 then
 		error("Expected number in range 0-15",2)
 	end
+	outputs[side] = math.floor(strength)
 end
 function api.redstone.getAnalogOutput(side)
 	if type(side) ~= "string" then
@@ -1056,7 +1075,7 @@ function api.redstone.getAnalogOutput(side)
 	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
-	return 0
+	return outputs[side]
 end
 function api.redstone.getAnalogueInput(side)
 	if type(side) ~= "string" then
@@ -1074,6 +1093,7 @@ function api.redstone.setAnalogueOutput(side, strength)
 	elseif strength <= -1 or strength >= 16 then
 		error("Expected number in range 0-15",2)
 	end
+	outputs[side] = math.floor(strength)
 end
 function api.redstone.getAnalogueOutput(side)
 	if type(side) ~= "string" then
@@ -1081,7 +1101,7 @@ function api.redstone.getAnalogueOutput(side)
 	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
-	return 0
+	return outputs[side]
 end
 function api.redstone.getBundledInput(side)
 	if type(side) ~= "string" then
@@ -1097,7 +1117,7 @@ function api.redstone.getBundledOutput(side)
 	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
-	return 0
+	return bundled[side]
 end
 function api.redstone.setBundledOutput(side, colors)
 	if type(side) ~= "string" or type(colors) ~= "number" then
@@ -1105,6 +1125,7 @@ function api.redstone.setBundledOutput(side, colors)
 	elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
 		error("Invalid side.",2)
 	end
+	bundled[side] = math.max(math.min(math.floor(colors),2^31),0)
 end
 function api.redstone.testBundledInput(side, color)
 	if type(side) ~= "string" or type(color) ~= "number" then
@@ -1168,7 +1189,6 @@ function api.bit.bnot(n)
 	return api.bit.norm(bit.bnot(n))
 end
 
-local ffi=require("ffi")
 local randseed=ffi.new("uint64_t")
 function rnext(bits)
 	randseed=(randseed*0x5DEECE66D+0xB)%2^48
@@ -1205,7 +1225,7 @@ function api.math.random(a,b)
 				n=n*10
 				c=c*0.1
 			end
-			return (math.floor(n*10000000+0.5)/10000000)*c
+			return n*c
 		else
 			if type(a)~="number" then
 				error("bad argument #1: number expected, got "..type(a),2)
@@ -1227,7 +1247,6 @@ function api.math.random(a,b)
 		return a+rnextInt(b+1-a)
 	end
 end
-api.math.pi = 3.1415927
 
 _tostring_DB[coroutine.create] = nil
 _tostring_DB[string.gmatch] = "gmatch" -- what ...
