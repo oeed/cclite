@@ -207,6 +207,7 @@ function emu.newComputer(color,id, type)
 			end
 		end
 
+		-- TODO: This seems like it could eat events, and probably isn't even correct
 		if #self.eventQueue > 0 then
 			for k, v in pairs(self.eventQueue) do
 				self:resume(unpack(v))

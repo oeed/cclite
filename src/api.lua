@@ -655,6 +655,7 @@ function api.init(Computer,color,id)
 			end
 
 			http.send(sParams)
+			return true
 		end
 	end
 
