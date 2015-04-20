@@ -233,10 +233,10 @@ function api.init(Computer,color,id)
 	end
 
 	local function FileWriteHandle(path, append)
-		if append and not vfs.exists(path) then
-			return nil
-		end
 		local closed = false
+		if path:find("/",nil,true) then
+			vfs.createDirectory(path:match("(.*)/"))
+		end
 		local File = vfs.newFile(path, append and "a" or "w")
 		if File == nil then return end
 		local handle = {
@@ -261,6 +261,9 @@ function api.init(Computer,color,id)
 
 	local function FileBinaryWriteHandle(path, append)
 		local closed = false
+		if path:find("/",nil,true) then
+			vfs.createDirectory(path:match("(.*)/"))
+		end
 		local File = vfs.newFile(path, append and "a" or "w")
 		if File == nil then return end
 		local handle = {
