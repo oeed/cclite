@@ -591,6 +591,7 @@ if _conf.enableAPI_http then
 		end
 
 		http.send(sParams)
+		return true
 	end
 end
 
