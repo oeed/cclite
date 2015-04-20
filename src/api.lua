@@ -282,7 +282,7 @@ function api.init(Computer,color,id)
 		return handle
 	end
 
-	local tmpapi = {}
+	local api = {}
 	local _tostring_DB = {}
 	local function addToDB(entry)
 		for k,v in pairs(entry) do
@@ -296,7 +296,7 @@ function api.init(Computer,color,id)
 	addToDB(string)
 	addToDB(table)
 	addToDB(coroutine)
-	function tmpapi.tostring(...)
+	function api.tostring(...)
 		if select("#",...) == 0 then error("bad argument #1: value expected",2) end
 		local something = ...
 		local fix
@@ -321,7 +321,7 @@ function api.init(Computer,color,id)
 			return tostring(something)
 		end
 	end
-	function tmpapi.tonumber(...)
+	function api.tonumber(...)
 		local str, base = ...
 		if select("#",...) < 1 then
 			error("bad argument #1: value expected",2)
@@ -350,7 +350,7 @@ function api.init(Computer,color,id)
 		end
 		return tonumber(str,base)
 	end
-	function tmpapi.getfenv(level)
+	function api.getfenv(level)
 		if level == nil then level = 1 end
 		if type(level) ~= "function" and type(level) ~= "number" then
 			error("bad argument: " .. (type(level) == "string" and "number" or "int") .. " expected, got " .. type(level),2)
@@ -368,11 +368,11 @@ function api.init(Computer,color,id)
 			end
 		end
 		if env.love == love then
-			return tmpapi.env
+			return api.env
 		end
 		return env
 	end
-	function tmpapi.loadstring(str, source)
+	function api.loadstring(str, source)
 		if source == nil then source = "string" end
 		if type(str) ~= "string" and type(str) ~= "number" then error("bad argument: string expected, got " .. type(str),2) end
 		if type(source) ~= "string" and type(source) ~= "number" then error("bad argument: String expected, got " .. type(str),2) end
@@ -392,10 +392,10 @@ function api.init(Computer,color,id)
 			return f, err
 		end
 		jit.off(f) -- Required for "Too long without yielding"
-		setfenv(f, tmpapi.env)
+		setfenv(f, api.env)
 		return f, err
 	end
-	function tmpapi.inext(tbl, key)
+	function api.inext(tbl, key)
 		if type(tbl) ~= "table" then
 			error("bad argument: table expected, got " .. type(tbl),2)
 		elseif type(key) ~= "number" then
@@ -407,8 +407,8 @@ function api.init(Computer,color,id)
 		end
 	end
 
-	tmpapi.term = {}
-	function tmpapi.term.clear()
+	api.term = {}
+	function api.term.clear()
 		for y = 1, Computer.term_height do
 			for x = 1, Computer.term_width do
 				Computer.textB[y][x] = " "
@@ -418,7 +418,7 @@ function api.init(Computer,color,id)
 		end
 		Screen.dirty = true
 	end
-	function tmpapi.term.clearLine()
+	function api.term.clearLine()
 		if Computer.state.cursorY > Computer.term_height or Computer.state.cursorY < 1 then
 			return
 		end
@@ -429,20 +429,20 @@ function api.init(Computer,color,id)
 		end
 		Screen.dirty = true
 	end
-	function tmpapi.term.getSize()
+	function api.term.getSize()
 		return Computer.term_width, Computer.term_height
 	end
-	function tmpapi.term.getCursorPos()
+	function api.term.getCursorPos()
 		return Computer.state.cursorX, Computer.state.cursorY
 	end
-	function tmpapi.term.setCursorPos(...)
+	function api.term.setCursorPos(...)
 		local x, y = ...
 		if type(x) ~= "number" or type(y) ~= "number" or select("#",...) ~= 2 then error("Expected number, number",2) end
 		Computer.state.cursorX = math.floor(x)
 		Computer.state.cursorY = math.floor(y)
 		Screen.dirty = true
 	end
-	function tmpapi.term.write(text)
+	function api.term.write(text)
 		text = serialize(text)
 		if Computer.state.cursorY > Computer.term_height or Computer.state.cursorY < 1 or Computer.state.cursorX > Computer.term_width then
 			Computer.state.cursorX = Computer.state.cursorX + #text
@@ -463,7 +463,7 @@ function api.init(Computer,color,id)
 		Computer.state.cursorX = Computer.state.cursorX + #text
 		Screen.dirty = true
 	end
-	function tmpapi.term.setTextColor(...)
+	function api.term.setTextColor(...)
 		local num = ...
 		if type(num) ~= "number" or select("#",...) ~= 1 then error("Expected number",2) end
 		if num < 1 or num >= 65536 or num ~= num then
@@ -476,7 +476,7 @@ function api.init(Computer,color,id)
 		Computer.state.fg = num
 		Screen.dirty = true
 	end
-	function tmpapi.term.setBackgroundColor(...)
+	function api.term.setBackgroundColor(...)
 		local num = ...
 		if type(num) ~= "number" or select("#",...) ~= 1 then error("Expected number",2) end
 		if num < 1 or num >= 65536 or num ~= num then
@@ -488,16 +488,16 @@ function api.init(Computer,color,id)
 		end
 		Computer.state.bg = num
 	end
-	function tmpapi.term.isColor()
+	function api.term.isColor()
 		return color
 	end
-	function tmpapi.term.setCursorBlink(...)
+	function api.term.setCursorBlink(...)
 		local bool = ...
 		if type(bool) ~= "boolean" or select("#",...) ~= 1 then error("Expected boolean",2) end
 		Computer.state.blink = bool
 		Screen.dirty = true
 	end
-	function tmpapi.term.scroll(...)
+	function api.term.scroll(...)
 		local n = ...
 		if type(n) ~= "number" or select("#",...) ~= 1 then error("Expected number",2) end
 		local textBuffer = {}
@@ -547,9 +547,9 @@ function api.init(Computer,color,id)
 		return copy
 	end
 
-	tmpapi.cclite = {}
+	api.cclite = {}
 	if _conf.enableAPI_cclite then
-		function tmpapi.cclite.peripheralAttach(sSide, sType)
+		function api.cclite.peripheralAttach(sSide, sType)
 			if type(sSide) ~= "string" or type(sType) ~= "string" then
 				error("Expected string, string",2)
 			end
@@ -576,7 +576,7 @@ function api.init(Computer,color,id)
 				error("No peripheral added",2)
 			end
 		end
-		function tmpapi.cclite.peripheralDetach(sSide)
+		function api.cclite.peripheralDetach(sSide)
 			if type(sSide) ~= "string" then error("Expected string",2) end
 			if not Computer.state.peripherals[sSide] then
 				error("No peripheral attached to " .. sSide,2)
@@ -587,26 +587,26 @@ function api.init(Computer,color,id)
 			Computer.state.peripherals[sSide] = nil
 			table.insert(Computer.eventQueue, {"peripheral_detach",sSide})
 		end
-		function tmpapi.cclite.getMethods(sSide)
+		function api.cclite.getMethods(sSide)
 			if type(sSide) ~= "string" then error("Expected string",2) end
 			if Computer.state.peripherals[sSide] then return Computer.state.peripherals[sSide].ccliteGetMethods() end
 			return
 		end
-		function tmpapi.cclite.call(sSide, sMethod, ...)
+		function api.cclite.call(sSide, sMethod, ...)
 			if type(sSide) ~= "string" then error("Expected string",2) end
 			if type(sMethod) ~= "string" then error("Expected string, string",2) end
 			if not Computer.state.peripherals[sSide] then error("No peripheral attached",2) end
 			return Computer.state.peripherals[sSide].ccliteCall(sMethod, ...)
 		end
-		function tmpapi.cclite.message(sMessage)
+		function api.cclite.message(sMessage)
 			if type(sMessage) ~= "string" then error("Expected string",2) end
 			Screen:message(sMessage)
 		end
 	end
 
 	if _conf.enableAPI_http then
-		tmpapi.http = {}
-		function tmpapi.http.checkURL(sUrl)
+		api.http = {}
+		function api.http.checkURL(sUrl)
 			if type(sUrl) ~= "string" then
 				error("Expected string",2)
 			end
@@ -619,7 +619,7 @@ function api.init(Computer,color,id)
 			end
 			return true
 		end
-		function tmpapi.http.request(sUrl, sParams)
+		function api.http.request(sUrl, sParams)
 			if type(sUrl) ~= "string" then
 				error("Expected string",2)
 			end
@@ -653,32 +653,32 @@ function api.init(Computer,color,id)
 		end
 	end
 
-	tmpapi.os = {}
-	function tmpapi.os.clock()
+	api.os = {}
+	function api.os.clock()
 		return tonumber(string.format("%0.2f",math.floor(love.timer.getTime()*20)/20 - Computer.state.startTime))
 	end
-	function tmpapi.os.time()
+	function api.os.time()
 		return math.floor((os.clock()*0.02)%24*1000)/1000
 	end
-	function tmpapi.os.day()
+	function api.os.day()
 		return math.floor(os.clock()/1200)
 	end
-	function tmpapi.os.getComputerID()
+	function api.os.getComputerID()
 		return id
 	end
-	function tmpapi.os.setComputerLabel(label)
+	function api.os.setComputerLabel(label)
 		if type(label) == "function" then label = nil end
 		if type(label) ~= "string" and type(label) ~= "nil" then error("Expected string or nil",2) end
 		Computer.state.label = label
 	end
-	function tmpapi.os.getComputerLabel()
+	function api.os.getComputerLabel()
 		return Computer.state.label
 	end
-	function tmpapi.os.queueEvent(event, ...)
+	function api.os.queueEvent(event, ...)
 		if type(event) ~= "string" then error("Expected string",2) end
 		table.insert(Computer.eventQueue, {event, ...})
 	end
-	function tmpapi.os.startTimer(nTimeout)
+	function api.os.startTimer(nTimeout)
 		if type(nTimeout) ~= "number" then error("Expected number",2) end
 		nTimeout = math.ceil(nTimeout*20)/20
 		if nTimeout < 0.05 then nTimeout = 0.05 end
@@ -686,54 +686,54 @@ function api.init(Computer,color,id)
 		Computer.actions.lastTimer = Computer.actions.lastTimer + 1
 		return Computer.actions.lastTimer - 1
 	end
-	function tmpapi.os.setAlarm(nTime)
+	function api.os.setAlarm(nTime)
 		if type(nTime) ~= "number" then error("Expected number",2) end
 		if nTime < 0 or nTime > 24 then
 			error("Number out of range",2)
 		end
 		local alarm = {
 			time = nTime,
-			day = tmpapi.os.day() + (nTime < tmpapi.os.time() and 1 or 0)
+			day = api.os.day() + (nTime < api.os.time() and 1 or 0)
 		}
 		Computer.actions.alarms[Computer.actions.lastAlarm] = alarm
 		Computer.actions.lastAlarm = Computer.actions.lastAlarm + 1
 		return Computer.actions.lastAlarm - 1
 	end
-	function tmpapi.os.cancelTimer(id)
+	function api.os.cancelTimer(id)
 		if type(id) ~= "number" then error("Expected number",2) end
 		if id == id then
 			Computer.actions.timers[id] = nil
 		end
 	end
-	function tmpapi.os.cancelAlarm(id)
+	function api.os.cancelAlarm(id)
 		if type(id) ~= "number" then error("Expected number",2) end
 		if id == id then
 			Computer.actions.alarms[id] = nil
 		end
 	end
-	function tmpapi.os.shutdown()
+	function api.os.shutdown()
 		Computer:stop(false)
 	end
-	function tmpapi.os.reboot()
+	function api.os.reboot()
 		Computer:stop(true) -- Reboots on next update/tick
 	end
 
-	tmpapi.peripheral = {}
-	function tmpapi.peripheral.isPresent(sSide)
+	api.peripheral = {}
+	function api.peripheral.isPresent(sSide)
 		if type(sSide) ~= "string" then error("Expected string",2) end
 		return Computer.state.peripherals[sSide] ~= nil
 	end
-	function tmpapi.peripheral.getType(sSide)
+	function api.peripheral.getType(sSide)
 		if type(sSide) ~= "string" then error("Expected string",2) end
 		if Computer.state.peripherals[sSide] then return peripheral.types[Computer.state.peripherals[sSide].type] end
 		return
 	end
-	function tmpapi.peripheral.getMethods(sSide)
+	function api.peripheral.getMethods(sSide)
 		if type(sSide) ~= "string" then error("Expected string",2) end
 		if Computer.state.peripherals[sSide] then return Computer.state.peripherals[sSide].getMethods() end
 		return
 	end
-	function tmpapi.peripheral.call(sSide, sMethod, ...)
+	function api.peripheral.call(sSide, sMethod, ...)
 		if type(sSide) ~= "string" or type(sMethod) ~= "string" then
 			if sSide == nil or type(sMethod) ~= "string" then
 				error("Expected string, string",2)
@@ -748,8 +748,8 @@ function api.init(Computer,color,id)
 		return Computer.state.peripherals[sSide].call(sMethod, ...)
 	end
 
-	tmpapi.fs = {}
-	function tmpapi.fs.combine(...)
+	api.fs = {}
+	function api.fs.combine(...)
 		local basePath, localPath = ...
 		if type(basePath) ~= "string" or type(localPath) ~= "string" or select("#",...) ~= 2 then
 			error("Expected string, string",2)
@@ -762,15 +762,15 @@ function api.init(Computer,color,id)
 		local segment = spec:match('([^/]*)'):gsub('/', '')
 		local pattern = '^' .. segment:gsub("[%.%[%]%(%)%%%+%-%?%^%$]","%%%1"):gsub("%z","%%z"):gsub("%*",".+") .. '$'
 
-		if tmpapi.fs.isDir(path) then
-			for _, file in ipairs(tmpapi.fs.list(path)) do
+		if api.fs.isDir(path) then
+			for _, file in ipairs(api.fs.list(path)) do
 				if file:match(pattern) then
-					local f = tmpapi.fs.combine(path, file)
+					local f = api.fs.combine(path, file)
 
 					if spec == segment then
 						table.insert(results, f)
 					end
-					if tmpapi.fs.isDir(f) then
+					if api.fs.isDir(f) then
 						recurse_spec(results, f, spec:sub(#segment + 2))
 					end
 				end
@@ -778,7 +778,7 @@ function api.init(Computer,color,id)
 		end
 	end
 
-	function tmpapi.fs.getDir(...)
+	function api.fs.getDir(...)
 		local path = ...
 		if type(path) ~= "string" or select("#",...) ~= 1 then
 			error("Expected string",2)
@@ -790,7 +790,7 @@ function api.init(Computer,color,id)
 			return path:match("(.*)/") or ""
 		end
 	end
-	function tmpapi.fs.find(...)
+	function api.fs.find(...)
 		local spec = ...
 		if type(spec) ~= "string" or select("#",...) ~= 1 then
 			error("Expected string",2)
@@ -801,7 +801,7 @@ function api.init(Computer,color,id)
 		return results
 	end
 	local fsmodes = {r=FileReadHandle, rb=FileBinaryReadHandle, w=FileWriteHandle, a=FileWriteHandle, wb=FileBinaryWriteHandle, ab=FileBinaryWriteHandle}
-	function tmpapi.fs.open(...)
+	function api.fs.open(...)
 		local path, mode = ...
 		if type(path) ~= "string" or type(mode) ~= "string" or select("#",...) ~= 2 then
 			error("Expected string, string",2)
@@ -817,7 +817,7 @@ function api.init(Computer,color,id)
 
 		return fsfunc(path, mode == "a" or mode == "ab")
 	end
-	function tmpapi.fs.list(...)
+	function api.fs.list(...)
 		local path = ...
 		if type(path) ~= "string" or select("#",...) ~= 1 then
 			error("Expected string",2)
@@ -831,7 +831,7 @@ function api.init(Computer,color,id)
 		end
 		return Computer.vfs.getDirectoryItems(path)
 	end
-	function tmpapi.fs.exists(...)
+	function api.fs.exists(...)
 		local path = ...
 		if type(path) ~= "string" or select("#",...) ~= 1 then
 			error("Expected string",2)
@@ -842,7 +842,7 @@ function api.init(Computer,color,id)
 
 		return Computer.vfs.exists(path)
 	end
-	function tmpapi.fs.isDir(...)
+	function api.fs.isDir(...)
 		local path = ...
 		if type(path) ~= "string" or select("#",...) ~= 1 then
 			error("Expected string",2)
@@ -853,7 +853,7 @@ function api.init(Computer,color,id)
 
 		return Computer.vfs.isDirectory(path)
 	end
-	function tmpapi.fs.isReadOnly(...)
+	function api.fs.isReadOnly(...)
 		local path = ...
 		if type(path) ~= "string" or select("#",...) ~= 1 then
 			error("Expected string",2)
@@ -861,7 +861,7 @@ function api.init(Computer,color,id)
 		path = cleanPath(path)
 		return path == "rom" or path:sub(1, 4) == "rom/"
 	end
-	function tmpapi.fs.getName(...)
+	function api.fs.getName(...)
 		local path = ...
 		if type(path) ~= "string" or select("#",...) ~= 1 then
 			error("Expected string",2)
@@ -873,7 +873,7 @@ function api.init(Computer,color,id)
 			return path:match(".*/(.+)") or path
 		end
 	end
-	function tmpapi.fs.getDrive(...)
+	function api.fs.getDrive(...)
 		local path = ...
 		if type(path) ~= "string" or select("#",...) ~= 1 then
 			error("Expected string",2)
@@ -888,7 +888,7 @@ function api.init(Computer,color,id)
 		local mountEntry = Computer.vfs.getMountContainer(path)
 		return mountEntry[4]
 	end
-	function tmpapi.fs.getSize(...)
+	function api.fs.getSize(...)
 		local path = ...
 		if type(path) ~= "string" or select("#",...) ~= 1 then
 			error("Expected string",2)
@@ -908,7 +908,7 @@ function api.init(Computer,color,id)
 		return Computer.vfs.getSize(path)
 	end
 
-	function tmpapi.fs.getFreeSpace(...)
+	function api.fs.getFreeSpace(...)
 		local path = ...
 		if type(path) ~= "string" or select("#",...) ~= 1 then
 			error("Expected string",2)
@@ -923,7 +923,7 @@ function api.init(Computer,color,id)
 		return math.huge
 	end
 
-	function tmpapi.fs.makeDir(...)
+	function api.fs.makeDir(...)
 		local path = ...
 		if type(path) ~= "string" or select("#",...) ~= 1 then
 			error("Expected string",2)
@@ -980,7 +980,7 @@ function api.init(Computer,color,id)
 		end
 	end
 
-	function tmpapi.fs.move(...)
+	function api.fs.move(...)
 		local fromPath, toPath = ...
 		if type(fromPath) ~= "string" or type(toPath) ~= "string" or select("#",...) ~= 2 then
 			error("Expected string, string",2)
@@ -1006,7 +1006,7 @@ function api.init(Computer,color,id)
 		deltree(fromPath)
 	end
 
-	function tmpapi.fs.copy(...)
+	function api.fs.copy(...)
 		local fromPath, toPath = ...
 		if type(fromPath) ~= "string" or type(toPath) ~= "string" or select("#",...) ~= 2 then
 			error("Expected string, string",2)
@@ -1029,7 +1029,7 @@ function api.init(Computer,color,id)
 		copytree(fromPath, toPath)
 	end
 
-	function tmpapi.fs.delete(...)
+	function api.fs.delete(...)
 		local path = ...
 		if type(path) ~= "string" or select("#",...) ~= 1 then
 			error("Expected string",2)
@@ -1045,13 +1045,13 @@ function api.init(Computer,color,id)
 		deltree(path)
 	end
 
-	tmpapi.redstone = {}
+	api.redstone = {}
 	local outputs = {top=0, bottom=0, left=0, right=0, front=0, back=0}
 	local bundled = {top=0, bottom=0, left=0, right=0, front=0, back=0}
-	function tmpapi.redstone.getSides()
+	function api.redstone.getSides()
 		return {"top","bottom","left","right","front","back"}
 	end
-	function tmpapi.redstone.getInput(side)
+	function api.redstone.getInput(side)
 		if type(side) ~= "string" then
 			error("Expected string",2)
 		elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
@@ -1059,7 +1059,7 @@ function api.init(Computer,color,id)
 		end
 		return false
 	end
-	function tmpapi.redstone.setOutput(side, value)
+	function api.redstone.setOutput(side, value)
 		if type(side) ~= "string" or type(value) ~= "boolean" then
 			error("Expected string, boolean",2)
 		elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
@@ -1067,7 +1067,7 @@ function api.init(Computer,color,id)
 		end
 		outputs[side] = value and 15 or 0
 	end
-	function tmpapi.redstone.getOutput(side)
+	function api.redstone.getOutput(side)
 		if type(side) ~= "string" then
 			error("Expected string",2)
 		elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
@@ -1075,7 +1075,7 @@ function api.init(Computer,color,id)
 		end
 		return outputs[side] > 0
 	end
-	function tmpapi.redstone.getAnalogInput(side)
+	function api.redstone.getAnalogInput(side)
 		if type(side) ~= "string" then
 			error("Expected string",2)
 		elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
@@ -1083,7 +1083,7 @@ function api.init(Computer,color,id)
 		end
 		return 0
 	end
-	function tmpapi.redstone.setAnalogOutput(side, strength)
+	function api.redstone.setAnalogOutput(side, strength)
 		if type(side) ~= "string" or type(strength) ~= "number" then
 			error("Expected string, number",2)
 		elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
@@ -1093,7 +1093,7 @@ function api.init(Computer,color,id)
 		end
 		outputs[side] = math.floor(strength)
 	end
-	function tmpapi.redstone.getAnalogOutput(side)
+	function api.redstone.getAnalogOutput(side)
 		if type(side) ~= "string" then
 			error("Expected string",2)
 		elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
@@ -1101,7 +1101,7 @@ function api.init(Computer,color,id)
 		end
 		return outputs[side]
 	end
-	function tmpapi.redstone.getAnalogueInput(side)
+	function api.redstone.getAnalogueInput(side)
 		if type(side) ~= "string" then
 			error("Expected string",2)
 		elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
@@ -1109,7 +1109,7 @@ function api.init(Computer,color,id)
 		end
 		return 0
 	end
-	function tmpapi.redstone.setAnalogueOutput(side, strength)
+	function api.redstone.setAnalogueOutput(side, strength)
 		if type(side) ~= "string" or type(strength) ~= "number" then
 			error("Expected string, number",2)
 		elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
@@ -1119,7 +1119,7 @@ function api.init(Computer,color,id)
 		end
 		outputs[side] = math.floor(strength)
 	end
-	function tmpapi.redstone.getAnalogueOutput(side)
+	function api.redstone.getAnalogueOutput(side)
 		if type(side) ~= "string" then
 			error("Expected string",2)
 		elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
@@ -1127,7 +1127,7 @@ function api.init(Computer,color,id)
 		end
 		return outputs[side]
 	end
-	function tmpapi.redstone.getBundledInput(side)
+	function api.redstone.getBundledInput(side)
 		if type(side) ~= "string" then
 			error("Expected string",2)
 		elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
@@ -1135,7 +1135,7 @@ function api.init(Computer,color,id)
 		end
 		return 0
 	end
-	function tmpapi.redstone.getBundledOutput(side)
+	function api.redstone.getBundledOutput(side)
 		if type(side) ~= "string" then
 			error("Expected string",2)
 		elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
@@ -1143,7 +1143,7 @@ function api.init(Computer,color,id)
 		end
 		return bundled[side]
 	end
-	function tmpapi.redstone.setBundledOutput(side, colors)
+	function api.redstone.setBundledOutput(side, colors)
 		if type(side) ~= "string" or type(colors) ~= "number" then
 			error("Expected string, number",2)
 		elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
@@ -1151,7 +1151,7 @@ function api.init(Computer,color,id)
 		end
 		bundled[side] = math.max(math.min(math.floor(colors),2^31),0)
 	end
-	function tmpapi.redstone.testBundledInput(side, color)
+	function api.redstone.testBundledInput(side, color)
 		if type(side) ~= "string" or type(color) ~= "number" then
 			error("Expected string, number",2)
 		elseif side~="top" and side~="bottom" and side~="left" and side~="right" and side~="front" and side~="back" then
@@ -1160,44 +1160,44 @@ function api.init(Computer,color,id)
 		return color == 0 or color ~= color
 	end
 
-	tmpapi.bit = {}
-	function tmpapi.bit.norm(val)
+	api.bit = {}
+	function api.bit.norm(val)
 		while val < 0 do val = val + 4294967296 end
 		return val
 	end
-	function tmpapi.bit.blshift(n, bits)
+	function api.bit.blshift(n, bits)
 		validateBitArg(n)
 		validateBitArg(bits)
-		return tmpapi.bit.norm(bit.lshift(n, bits))
+		return api.bit.norm(bit.lshift(n, bits))
 	end
-	function tmpapi.bit.brshift(n, bits)
+	function api.bit.brshift(n, bits)
 		validateBitArg(n)
 		validateBitArg(bits)
-		return tmpapi.bit.norm(bit.arshift(n, bits))
+		return api.bit.norm(bit.arshift(n, bits))
 	end
-	function tmpapi.bit.blogic_rshift(n, bits)
+	function api.bit.blogic_rshift(n, bits)
 		validateBitArg(n)
 		validateBitArg(bits)
-		return tmpapi.bit.norm(bit.rshift(n, bits))
+		return api.bit.norm(bit.rshift(n, bits))
 	end
-	function tmpapi.bit.bxor(m, n)
+	function api.bit.bxor(m, n)
 		validateBitArg(m)
 		validateBitArg(n)
-		return tmpapi.bit.norm(bit.bxor(m, n))
+		return api.bit.norm(bit.bxor(m, n))
 	end
-	function tmpapi.bit.bor(m, n)
+	function api.bit.bor(m, n)
 		validateBitArg(m)
 		validateBitArg(n)
-		return tmpapi.bit.norm(bit.bor(m, n))
+		return api.bit.norm(bit.bor(m, n))
 	end
-	function tmpapi.bit.band(m, n)
+	function api.bit.band(m, n)
 		validateBitArg(m)
 		validateBitArg(n)
-		return tmpapi.bit.norm(bit.band(m, n))
+		return api.bit.norm(bit.band(m, n))
 	end
-	function tmpapi.bit.bnot(n)
+	function api.bit.bnot(n)
 		validateBitArg(n)
-		return tmpapi.bit.norm(bit.bnot(n))
+		return api.bit.norm(bit.bnot(n))
 	end
 
 	local randseed=ffi.new("uint64_t")
@@ -1216,15 +1216,15 @@ function api.init(Computer,color,id)
 		until bits-val+(n-1)>=0
 		return val
 	end
-	tmpapi.math=tablecopy(math)
-	function tmpapi.math.randomseed(num)
+	api.math=tablecopy(math)
+	function api.math.randomseed(num)
 		if type(num)~="number" then
 			error("bad argument #1: number expected, got "..type(num),2)
 		end
 		num=((num==math.huge or num==1/0) and -1) or (num~=num and 0) or math.floor(num)
 		randseed=(ffi.cast("uint64_t",bit.bxor(math.floor(num/2^32)%2^16,5))*2^32)+tonumber(bit.tohex(bit.bxor(num%2^32,0xDEECE66D)),16)
 	end
-	function tmpapi.math.random(a,b)
+	function api.math.random(a,b)
 		if b==nil then
 			if a==nil then
 				local n=tonumber((rnext(26)*(2^27))+rnext(27))/2^53
@@ -1261,23 +1261,23 @@ function api.init(Computer,color,id)
 
 	_tostring_DB[coroutine.create] = nil
 	_tostring_DB[string.gmatch] = "gmatch" -- what ...
-	_tostring_DB[tmpapi.tostring] = "tostring"
-	_tostring_DB[tmpapi.tonumber] = "tonumber"
-	_tostring_DB[tmpapi.loadstring] = "loadstring"
-	_tostring_DB[tmpapi.inext] = "__inext"
-	_tostring_DB[tmpapi.math.random] = "random"
-	_tostring_DB[tmpapi.math.randomseed] = "randomseed"
-	_tostring_DB[tmpapi.getfenv] = "getfenv"
+	_tostring_DB[api.tostring] = "tostring"
+	_tostring_DB[api.tonumber] = "tonumber"
+	_tostring_DB[api.loadstring] = "loadstring"
+	_tostring_DB[api.inext] = "__inext"
+	_tostring_DB[api.math.random] = "random"
+	_tostring_DB[api.math.randomseed] = "randomseed"
+	_tostring_DB[api.getfenv] = "getfenv"
 	_tostring_DB[error] = "error"
 
-	tmpapi.math.randomseed(math.random(0,0xFFFFFFFFFFFF))
-	tmpapi.env = {
+	api.math.randomseed(math.random(0,0xFFFFFFFFFFFF))
+	api.env = {
 		_VERSION = "Luaj-jse 2.0.3",
-		__inext = tmpapi.inext,
-		tostring = tmpapi.tostring,
-		tonumber = tmpapi.tonumber,
+		__inext = api.inext,
+		tostring = api.tostring,
+		tonumber = api.tonumber,
 		unpack = unpack,
-		getfenv = tmpapi.getfenv,
+		getfenv = api.getfenv,
 		setfenv = setfenv,
 		rawequal = rawequal,
 		rawset = rawset,
@@ -1293,121 +1293,121 @@ function api.init(Computer,color,id)
 		pairs = pairs,
 		pcall = pcall,
 		xpcall = xpcall,
-		loadstring = tmpapi.loadstring,
-		math = tmpapi.math,
+		loadstring = api.loadstring,
+		math = api.math,
 		string = tablecopy(string),
 		table = tablecopy(table),
 		coroutine = tablecopy(coroutine),
 
-		-- CC apis (BIOS completes tmpapi.)
+		-- CC apis (BIOS completes api.)
 		term = {
-			clear = tmpapi.term.clear,
-			clearLine = tmpapi.term.clearLine,
-			getSize = tmpapi.term.getSize,
-			getCursorPos = tmpapi.term.getCursorPos,
-			setCursorPos = tmpapi.term.setCursorPos,
-			setTextColor = tmpapi.term.setTextColor,
-			setTextColour = tmpapi.term.setTextColor,
-			setBackgroundColor = tmpapi.term.setBackgroundColor,
-			setBackgroundColour = tmpapi.term.setBackgroundColor,
-			setCursorBlink = tmpapi.term.setCursorBlink,
-			scroll = tmpapi.term.scroll,
-			write = tmpapi.term.write,
-			isColor = tmpapi.term.isColor,
-			isColour = tmpapi.term.isColor,
+			clear = api.term.clear,
+			clearLine = api.term.clearLine,
+			getSize = api.term.getSize,
+			getCursorPos = api.term.getCursorPos,
+			setCursorPos = api.term.setCursorPos,
+			setTextColor = api.term.setTextColor,
+			setTextColour = api.term.setTextColor,
+			setBackgroundColor = api.term.setBackgroundColor,
+			setBackgroundColour = api.term.setBackgroundColor,
+			setCursorBlink = api.term.setCursorBlink,
+			scroll = api.term.scroll,
+			write = api.term.write,
+			isColor = api.term.isColor,
+			isColour = api.term.isColor,
 		},
 		fs = {
-			getDir = tmpapi.fs.getDir,
-			find = tmpapi.fs.find,
-			open = tmpapi.fs.open,
-			list = tmpapi.fs.list,
-			exists = tmpapi.fs.exists,
-			isDir = tmpapi.fs.isDir,
-			isReadOnly = tmpapi.fs.isReadOnly,
-			getName = tmpapi.fs.getName,
-			getDrive = tmpapi.fs.getDrive,
-			getSize = tmpapi.fs.getSize,
-			getFreeSpace = tmpapi.fs.getFreeSpace,
-			makeDir = tmpapi.fs.makeDir,
-			move = tmpapi.fs.move,
-			copy = tmpapi.fs.copy,
-			delete = tmpapi.fs.delete,
-			combine = tmpapi.fs.combine,
+			getDir = api.fs.getDir,
+			find = api.fs.find,
+			open = api.fs.open,
+			list = api.fs.list,
+			exists = api.fs.exists,
+			isDir = api.fs.isDir,
+			isReadOnly = api.fs.isReadOnly,
+			getName = api.fs.getName,
+			getDrive = api.fs.getDrive,
+			getSize = api.fs.getSize,
+			getFreeSpace = api.fs.getFreeSpace,
+			makeDir = api.fs.makeDir,
+			move = api.fs.move,
+			copy = api.fs.copy,
+			delete = api.fs.delete,
+			combine = api.fs.combine,
 		},
 		os = {
-			clock = tmpapi.os.clock,
-			getComputerID = tmpapi.os.getComputerID,
-			computerID = tmpapi.os.getComputerID,
-			setComputerLabel = tmpapi.os.setComputerLabel,
-			getComputerLabel = tmpapi.os.getComputerLabel,
-			computerLabel = tmpapi.os.getComputerLabel,
-			queueEvent = tmpapi.os.queueEvent,
-			startTimer = tmpapi.os.startTimer,
-			setAlarm = tmpapi.os.setAlarm,
-			cancelTimer = tmpapi.os.cancelTimer,
-			cancelAlarm = tmpapi.os.cancelAlarm,
-			time = tmpapi.os.time,
-			day = tmpapi.os.day,
-			shutdown = tmpapi.os.shutdown,
-			reboot = tmpapi.os.reboot,
+			clock = api.os.clock,
+			getComputerID = api.os.getComputerID,
+			computerID = api.os.getComputerID,
+			setComputerLabel = api.os.setComputerLabel,
+			getComputerLabel = api.os.getComputerLabel,
+			computerLabel = api.os.getComputerLabel,
+			queueEvent = api.os.queueEvent,
+			startTimer = api.os.startTimer,
+			setAlarm = api.os.setAlarm,
+			cancelTimer = api.os.cancelTimer,
+			cancelAlarm = api.os.cancelAlarm,
+			time = api.os.time,
+			day = api.os.day,
+			shutdown = api.os.shutdown,
+			reboot = api.os.reboot,
 		},
 		peripheral = {
-			isPresent = tmpapi.peripheral.isPresent,
-			getType = tmpapi.peripheral.getType,
-			getMethods = tmpapi.peripheral.getMethods,
-			call = tmpapi.peripheral.call,
+			isPresent = api.peripheral.isPresent,
+			getType = api.peripheral.getType,
+			getMethods = api.peripheral.getMethods,
+			call = api.peripheral.call,
 		},
 		redstone = {
-			getSides = tmpapi.redstone.getSides,
-			getInput = tmpapi.redstone.getInput,
-			getOutput = tmpapi.redstone.getOutput,
-			getBundledInput = tmpapi.redstone.getBundledInput,
-			getBundledOutput = tmpapi.redstone.getBundledOutput,
-			getAnalogInput = tmpapi.redstone.getAnalogInput,
-			getAnalogOutput = tmpapi.redstone.getAnalogOutput,
-			getAnalogueInput = tmpapi.redstone.getAnalogueInput,
-			getAnalogueOutput = tmpapi.redstone.getAnalogueOutput,
-			setOutput = tmpapi.redstone.setOutput,
-			setBundledOutput = tmpapi.redstone.setBundledOutput,
-			setAnalogOutput = tmpapi.redstone.setAnalogOutput,
-			setAnalogueOutput = tmpapi.redstone.setAnalogueOutput,
-			testBundledInput = tmpapi.redstone.testBundledInput,
+			getSides = api.redstone.getSides,
+			getInput = api.redstone.getInput,
+			getOutput = api.redstone.getOutput,
+			getBundledInput = api.redstone.getBundledInput,
+			getBundledOutput = api.redstone.getBundledOutput,
+			getAnalogInput = api.redstone.getAnalogInput,
+			getAnalogOutput = api.redstone.getAnalogOutput,
+			getAnalogueInput = api.redstone.getAnalogueInput,
+			getAnalogueOutput = api.redstone.getAnalogueOutput,
+			setOutput = api.redstone.setOutput,
+			setBundledOutput = api.redstone.setBundledOutput,
+			setAnalogOutput = api.redstone.setAnalogOutput,
+			setAnalogueOutput = api.redstone.setAnalogueOutput,
+			testBundledInput = api.redstone.testBundledInput,
 		},
 		bit = {
-			blshift = tmpapi.bit.blshift,
-			brshift = tmpapi.bit.brshift,
-			blogic_rshift = tmpapi.bit.blogic_rshift,
-			bxor = tmpapi.bit.bxor,
-			bor = tmpapi.bit.bor,
-			band = tmpapi.bit.band,
-			bnot = tmpapi.bit.bnot,
+			blshift = api.bit.blshift,
+			brshift = api.bit.brshift,
+			blogic_rshift = api.bit.blogic_rshift,
+			bxor = api.bit.bxor,
+			bor = api.bit.bor,
+			band = api.bit.band,
+			bnot = api.bit.bnot,
 		},
 	}
 	if _conf.enableAPI_http then
-		tmpapi.env.http = {
-			checkURL = tmpapi.http.checkURL,
-			request = tmpapi.http.request,
+		api.env.http = {
+			checkURL = api.http.checkURL,
+			request = api.http.request,
 		}
 	end
 	if _conf.enableAPI_cclite then
-		tmpapi.env.cclite = {
-			peripheralAttach = tmpapi.cclite.peripheralAttach,
-			peripheralDetach = tmpapi.cclite.peripheralDetach,
-			getMethods = tmpapi.cclite.getMethods,
-			call = tmpapi.cclite.call,
+		api.env.cclite = {
+			peripheralAttach = api.cclite.peripheralAttach,
+			peripheralDetach = api.cclite.peripheralDetach,
+			getMethods = api.cclite.getMethods,
+			call = api.cclite.call,
 			log = print,
-			message = tmpapi.cclite.message,
+			message = api.cclite.message,
 			traceback = debug.traceback,
 		}
 	end
 
 	if Computer.type == "pocket" then
-		tmpapi.env.pocket = {}
+		api.env.pocket = {}
 	end
 
-	tmpapi.env.rs = tmpapi.env.redstone
-	tmpapi.env.math.mod = nil
-	tmpapi.env.string.gfind = nil
-	tmpapi.env._G = tmpapi.env
-	return tmpapi
+	api.env.rs = api.env.redstone
+	api.env.math.mod = nil
+	api.env.string.gfind = nil
+	api.env._G = api.env
+	return api
 end
