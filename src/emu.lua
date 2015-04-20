@@ -93,7 +93,10 @@ function emu.newComputer(color,id, type)
 
 		self.proc = coroutine.create(fn)
 		self.running = true
-		self:resume({})
+		local ok, filter = self:resume({})
+		if ok then
+			self.eventFilter = filter
+		end
 	end
 
 	function Computer:stop(reboot)
@@ -111,6 +114,7 @@ function emu.newComputer(color,id, type)
 		self.actions.timers = {}
 		self.actions.alarms = {}
 		self.eventQueue = {}
+		self.eventFilter = nil
 	end
 
 	function Computer:resume(...)
@@ -207,12 +211,18 @@ function emu.newComputer(color,id, type)
 			end
 		end
 
-		-- TODO: This seems like it could eat events, and probably isn't even correct
-		if #self.eventQueue > 0 then
-			for k, v in pairs(self.eventQueue) do
-				self:resume(unpack(v))
+		while #self.eventQueue > 0 do
+			while #self.eventQueue > 256 do
+				table.remove(self.eventQueue,257)
 			end
-			self.eventQueue = {}
+			local event = self.eventQueue[1]
+			table.remove(self.eventQueue,1)
+			if self.eventFilter == nil or event[1] == self.eventFilter or event[1] == "terminate" then
+				local ok, filter = self:resume(unpack(event))
+				if ok then
+					self.eventFilter = filter
+				end
+			end
 		end
 	end
 
