@@ -61,9 +61,7 @@ end
 Screen.font = love.graphics.newImageFont("res/minecraft.png",glyphs)
 love.graphics.setFont(Screen.font)
 
-for i = 32,126 do Screen.tOffset[string.char(i)] = math.floor(3 - Screen.font:getWidth(string.char(i)) / 2) * _conf.terminal_guiScale end
-Screen.tOffset["@"] = 0
-Screen.tOffset["~"] = 0
+for i = 32,126 do Screen.tOffset[string.char(i)] = math.ceil(3 - Screen.font:getWidth(string.char(i)) / 2) * _conf.terminal_guiScale end
 
 local msgTime = love.timer.getTime() + 5
 for i = 1,10 do
@@ -141,9 +139,9 @@ function Screen:draw(Emulator)
 			local self_textColourB = Emulator.textColourB[y + 1]
 			for x = 0, decWidth do
 				local text = self_textB[x + 1]
-				if text ~= " " and text ~= "\t" then
+				if text ~= "\0" and text ~= "\9" and text ~= " " then
 					local sByte = string.byte(text)
-					if sByte < 32 or sByte > 126 or sByte == 96 then
+					if sByte < 32 or sByte > 126 then
 						text = "?"
 					end
 					setColor(COLOUR_CODE[self_textColourB[x + 1]])
