@@ -171,12 +171,13 @@ end
 local ffi=require("ffi")
 api = {}
 function api.init(Computer,color,id)
+	local vfs = Computer.vfs
 	local function FileReadHandle(path)
-		if not Computer.vfs.exists(path) then
+		if not vfs.exists(path) then
 			return nil
 		end
 		local contents = {}
-		for line in Computer.vfs.lines(path) do
+		for line in vfs.lines(path) do
 			table.insert(contents, line)
 		end
 		local closed = false
@@ -212,11 +213,11 @@ function api.init(Computer,color,id)
 	end
 
 	local function FileBinaryReadHandle(path)
-		if not Computer.vfs.exists(path) then
+		if not vfs.exists(path) then
 			return nil
 		end
 		local closed = false
-		local File = Computer.vfs.newFile(path, "r")
+		local File = vfs.newFile(path, "r")
 		if File == nil then return end
 		local handle = {
 			close = function()
@@ -232,11 +233,11 @@ function api.init(Computer,color,id)
 	end
 
 	local function FileWriteHandle(path, append)
-		if append and not Computer.vfs.exists(path) then
+		if append and not vfs.exists(path) then
 			return nil
 		end
 		local closed = false
-		local File = Computer.vfs.newFile(path, append and "a" or "w")
+		local File = vfs.newFile(path, append and "a" or "w")
 		if File == nil then return end
 		local handle = {
 			close = function()
@@ -260,7 +261,7 @@ function api.init(Computer,color,id)
 
 	local function FileBinaryWriteHandle(path, append)
 		local closed = false
-		local File = Computer.vfs.newFile(path, append and "a" or "w")
+		local File = vfs.newFile(path, append and "a" or "w")
 		if File == nil then return end
 		local handle = {
 			close = function()
@@ -819,7 +820,7 @@ function api.init(Computer,color,id)
 		local fsfunc = fsmodes[mode]
 		if fsfunc == nil then error("Unsupported mode",2) end
 
-		if Computer.vfs.isDirectory(path) then return end
+		if vfs.isDirectory(path) then return end
 
 		return fsfunc(path, mode == "a" or mode == "ab")
 	end
@@ -832,10 +833,10 @@ function api.init(Computer,color,id)
 		path = cleanPath(path)
 		if path == ".." or path:sub(1,3) == "../" then error("Invalid Path",2) end
 
-		if not Computer.vfs.exists(path) or not Computer.vfs.isDirectory(path) then
+		if not vfs.exists(path) or not vfs.isDirectory(path) then
 			error("Not a directory",2)
 		end
-		return Computer.vfs.getDirectoryItems(path)
+		return vfs.getDirectoryItems(path)
 	end
 	function api.fs.exists(...)
 		local path = ...
@@ -846,7 +847,7 @@ function api.init(Computer,color,id)
 		path = cleanPath(path)
 		if path == ".." or path:sub(1,3) == "../" then error("Invalid Path",2) end
 
-		return Computer.vfs.exists(path)
+		return vfs.exists(path)
 	end
 	function api.fs.isDir(...)
 		local path = ...
@@ -857,7 +858,7 @@ function api.init(Computer,color,id)
 		path = cleanPath(path)
 		if path == ".." or path:sub(1,3) == "../" then error("Invalid Path",2) end
 
-		return Computer.vfs.isDirectory(path)
+		return vfs.isDirectory(path)
 	end
 	function api.fs.isReadOnly(...)
 		local path = ...
@@ -888,10 +889,10 @@ function api.init(Computer,color,id)
 		path = cleanPath(path)
 		if path == ".." or path:sub(1,3) == "../" then error("Invalid Path",2) end
 
-		if not Computer.vfs.exists(path) then
+		if not vfs.exists(path) then
 			return
 		end
-		local mountEntry = Computer.vfs.getMountContainer(path)
+		local mountEntry = vfs.getMountContainer(path)
 		return mountEntry[4]
 	end
 	function api.fs.getSize(...)
@@ -903,15 +904,15 @@ function api.init(Computer,color,id)
 		path = cleanPath(path)
 		if path == ".." or path:sub(1,3) == "../" then error("Invalid Path",2) end
 
-		if Computer.vfs.exists(path) ~= true then
+		if vfs.exists(path) ~= true then
 			error("No such file",2)
 		end
 
-		if Computer.vfs.isDirectory(path) then
+		if vfs.isDirectory(path) then
 			return 0
 		end
 
-		return Computer.vfs.getSize(path)
+		return vfs.getSize(path)
 	end
 
 	function api.fs.getFreeSpace(...)
@@ -941,46 +942,46 @@ function api.init(Computer,color,id)
 		if path == "rom" or path:sub(1, 4) == "rom/" then
 			error("Access Denied",2)
 		end
-		if Computer.vfs.exists(path) and not Computer.vfs.isDirectory(path) then
+		if vfs.exists(path) and not vfs.isDirectory(path) then
 			error("File exists",2)
 		end
-		Computer.vfs.createDirectory(path)
+		vfs.createDirectory(path)
 	end
 
 	local function deltree(sFolder)
-		local tObjects = Computer.vfs.getDirectoryItems(sFolder)
+		local tObjects = vfs.getDirectoryItems(sFolder)
 
 		if tObjects then
 			for _, sObject in pairs(tObjects) do
 				local pObject =  sFolder.."/"..sObject
 
-				if Computer.vfs.isDirectory(pObject) then
+				if vfs.isDirectory(pObject) then
 					deltree(pObject)
 				end
-				Computer.vfs.remove(pObject)
+				vfs.remove(pObject)
 			end
 		end
-		return Computer.vfs.remove(sFolder)
+		return vfs.remove(sFolder)
 	end
 
 	local function copytree(sFolder, sToFolder)
-		if not Computer.vfs.isDirectory(sFolder) then
-			Computer.vfs.write(sToFolder, Computer.vfs.read(sFolder))
+		if not vfs.isDirectory(sFolder) then
+			vfs.write(sToFolder, vfs.read(sFolder))
 			return
 		end
-		Computer.vfs.createDirectory(sToFolder)
-		local tObjects = Computer.vfs.getDirectoryItems(sFolder)
+		vfs.createDirectory(sToFolder)
+		local tObjects = vfs.getDirectoryItems(sFolder)
 
 		if tObjects then
 			for _, sObject in pairs(tObjects) do
 				local pObject =  sFolder.."/"..sObject
 				local pToObject = sToFolder.."/"..sObject
 
-				if Computer.vfs.isDirectory(pObject) then
-					Computer.vfs.createDirectory(pToObject)
+				if vfs.isDirectory(pObject) then
+					vfs.createDirectory(pToObject)
 					copytree(pObject,pToObject)
 				else
-					Computer.vfs.write(pToObject, Computer.vfs.read(pObject))
+					vfs.write(pToObject, vfs.read(pObject))
 				end
 			end
 		end
@@ -1001,9 +1002,9 @@ function api.init(Computer,color,id)
 			toPath == "rom" or toPath:sub(1, 4) == "rom/" then
 			error("Access Denied",2)
 		end
-		if not Computer.vfs.exists(fromPath) then
+		if not vfs.exists(fromPath) then
 			error("No such file",2)
-		elseif Computer.vfs.exists(toPath) then
+		elseif vfs.exists(toPath) then
 			error("File exists",2)
 		elseif contains(fromPath, toPath) then
 			error("Can't move a directory inside itself",2)
@@ -1025,9 +1026,9 @@ function api.init(Computer,color,id)
 
 		if toPath == "rom" or toPath:sub(1, 4) == "rom/" then
 			error("Access Denied",2)
-		elseif not Computer.vfs.exists(fromPath) then
+		elseif not vfs.exists(fromPath) then
 			error("No such file",2)
-		elseif Computer.vfs.exists(toPath) then
+		elseif vfs.exists(toPath) then
 			error("File exists",2)
 		elseif contains(fromPath, toPath) then
 			error("Can't copy a directory inside itself",2)
@@ -1044,7 +1045,7 @@ function api.init(Computer,color,id)
 		path = cleanPath(path)
 		if path == ".." or path:sub(1,3) == "../" then error("Invalid Path",2) end
 
-		if path == "rom" or path:sub(1, 4) == "rom/" or Computer.vfs.isMountPath(path) then
+		if path == "rom" or path:sub(1, 4) == "rom/" or vfs.isMountPath(path) then
 
 			error("Access Denied",2)
 		end
