@@ -251,8 +251,8 @@ function api.tostring(...)
 	if something == nil then
 		return "nil"
 	elseif type(something) == "number" then
-		if tonumber(ffi.cast("double",ffi.cast("signed long",something))) == something then
-			fix = tostring(ffi.cast("signed long", something)):match("(.*)U?LL")
+		if math.floor(something) == something and something < 2^63 and something >= -2^63 then
+			fix = string.format("%.0f",something)
 		else
 			fix = string.format("%.8G",something):gsub("E%+","E")
 		end
