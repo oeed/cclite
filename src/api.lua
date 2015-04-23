@@ -762,7 +762,7 @@ function api.init(Computer,color,id)
 
 	local function recurse_spec(results, path, spec)
 		local segment = spec:match('([^/]*)'):gsub('/', '')
-		local pattern = '^' .. segment:gsub("[%.%[%]%(%)%%%+%-%?%^%$]","%%%1"):gsub("%z","%%z"):gsub("%*",".+") .. '$'
+		local pattern = '^' .. segment:gsub("[%.%[%]%(%)%%%+%-%?%^%$]","%%%1"):gsub("%z","%%z"):gsub("%*","[^/]-") .. '$'
 
 		if api.fs.isDir(path) then
 			for _, file in ipairs(api.fs.list(path)) do
