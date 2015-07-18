@@ -10,7 +10,7 @@ local COLOUR_RGB = {
 	LIGHT_GRAY = {153, 153, 153},
 	CYAN = {76, 153, 178},
 	PURPLE = {178, 102, 229},
-	BLUE = {37, 49, 146},
+	BLUE = {51, 102, 204},
 	BROWN = {127, 102, 76},
 	GREEN = {87, 166, 78},
 	RED = {204, 76, 76},
@@ -35,12 +35,6 @@ local COLOUR_CODE = {
 	[16384] = COLOUR_RGB.RED,
 	[32768] = COLOUR_RGB.BLACK,
 }
-
-local COLOUR_CODE_BG = {}
-for k,v in pairs(COLOUR_CODE) do
-	COLOUR_CODE_BG[k] = v
-end
-COLOUR_CODE_BG[32768] = {0,0,0}
 
 Screen = {
 	sWidth = (_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2),
@@ -141,11 +135,11 @@ function Screen:draw()
 		ldrawRect("fill", 0, 0, self.sWidth, self.sHeight)
 	else
 		-- Render background color
-		setColor(COLOUR_CODE_BG[self.backgroundColourB[1][1]])
+		setColor(COLOUR_CODE[self.backgroundColourB[1][1]])
 		for y = 0, decHeight do
 			for x = 0, decWidth do
 
-				setColor(COLOUR_CODE_BG[self.backgroundColourB[y + 1][x + 1]]) -- TODO COLOUR_CODE lookup might be too slow?
+				setColor(COLOUR_CODE[self.backgroundColourB[y + 1][x + 1]]) -- TODO COLOUR_CODE lookup might be too slow?
 				ldrawRect("fill", x * self.pixelWidth + (x == 0 and 0 or _conf.terminal_guiScale), y * self.pixelHeight + (y == 0 and 0 or _conf.terminal_guiScale), self.pixelWidth + ((x == 0 or x == decWidth) and _conf.terminal_guiScale or 0), self.pixelHeight + ((y == 0 or y == decHeight) and _conf.terminal_guiScale or 0))
 
 			end

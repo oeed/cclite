@@ -251,7 +251,7 @@ function api.tostring(...)
 	if thing == nil then
 		return "nil"
 	elseif type(thing) == "number" then
-		if thing == 1/0 or thing == -1/0 or thing == 0/0 or thing == -(0/0) or (math.floor(thing) == thing and thing < 2^63 and thing >= -2^63) then
+		if thing == 1/0 or thing == -1/0 or thing ~= thing or (math.floor(thing) == thing and thing < 2^63 and thing >= -2^63) then
 			fix = string.format("%.0f",thing)
 		else
 			fix = string.format("%.8G",thing):gsub("E%+","E")
@@ -1177,7 +1177,10 @@ function api.redstone.testBundledInput(side, color)
 end
 
 api.bit = {}
---TODO: Various other things are wrong with the old bit api
+local function cleanValue(val)
+	if val ~= val then val = 0 end
+	return math.max(math.min(val,2^31-1),-2^31)
+end
 function api.bit.norm(val)
 	while val < 0 do val = val + 4294967296 end
 	return val
@@ -1186,42 +1189,49 @@ function api.bit.blshift(n, bits)
 	if type(n) ~= "number" or type(bits) ~= "number" then
 		error("Expected number, number",2)
 	end
+	n,bits=cleanValue(n),cleanValue(bits)
 	return api.bit.norm(bit.lshift(n, bits))
 end
 function api.bit.brshift(n, bits)
 	if type(n) ~= "number" or type(bits) ~= "number" then
 		error("Expected number, number",2)
 	end
+	n,bits=cleanValue(n),cleanValue(bits)
 	return api.bit.norm(bit.arshift(n, bits))
 end
 function api.bit.blogic_rshift(n, bits)
 	if type(n) ~= "number" or type(bits) ~= "number" then
 		error("Expected number, number",2)
 	end
+	n,bits=cleanValue(n),cleanValue(bits)
 	return api.bit.norm(bit.rshift(n, bits))
 end
 function api.bit.bxor(m, n)
 	if type(m) ~= "number" or type(n) ~= "number" then
 		error("Expected number, number",2)
 	end
+	m,n=cleanValue(m),cleanValue(n)
 	return api.bit.norm(bit.bxor(m, n))
 end
 function api.bit.bor(m, n)
 	if type(m) ~= "number" or type(n) ~= "number" then
 		error("Expected number, number",2)
 	end
+	m,n=cleanValue(m),cleanValue(n)
 	return api.bit.norm(bit.bor(m, n))
 end
 function api.bit.band(m, n)
 	if type(m) ~= "number" or type(n) ~= "number" then
 		error("Expected number, number",2)
 	end
+	m,n=cleanValue(m),cleanValue(n)
 	return api.bit.norm(bit.band(m, n))
 end
 function api.bit.bnot(n)
 	if type(n) ~= "number" then
 		error("Expected number",2)
 	end
+	n=cleanValue(n)
 	return api.bit.norm(bit.bnot(n))
 end
 
