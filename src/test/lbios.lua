@@ -21,7 +21,14 @@ function egt(tab,ext)
 		file.write(str .. "=")
 		if type(v) == "string" then
 			file.writeLine(string.format("%q",v))
-		elseif type(v) == "function" or type(v) == "table" then
+		elseif type(v) == "function" then
+			local ts = tostring(v)
+			if ts:find("function: ",nil,true) then
+				file.writeLine(type(v))
+			else
+				file.writeLine(ts)
+			end
+		elseif type(v) == "table" then
 			file.writeLine(type(v))
 		else
 			file.writeLine(tostring(v))

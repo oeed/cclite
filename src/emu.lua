@@ -164,7 +164,7 @@ function emu.newComputer(color,id, type)
 			if Screen.lastCursor == nil then
 				Screen.lastCursor = now
 			end
-			if now - Screen.lastCursor >= 0.25 then
+			if now - Screen.lastCursor >= 3/8 then
 				Screen.showCursor = not Screen.showCursor
 				Screen.lastCursor = now
 				if self.state.cursorY >= 1 and self.state.cursorY <= _conf.terminal_height and self.state.cursorX >= 1 and self.state.cursorX <= _conf.terminal_width then

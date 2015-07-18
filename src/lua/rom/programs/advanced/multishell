@@ -57,7 +57,7 @@ local function launchProcess( tProgramEnv, sProgramPath, ... )
         tProcess.window = window.create( parentTerm, 1, 1, w, h, false )
     end
     tProcess.co = coroutine.create( function()
-        os.run( tProgramEnv, sProgramPath, unpack( tProgramArgs ) )
+        os.run( tProgramEnv, sProgramPath, table.unpack( tProgramArgs ) )
         if not tProcess.bInteracted then
             term.setCursorBlink( false )
             print( "Press any key to continue" )
@@ -230,10 +230,10 @@ while #tProcesses > 0 do
         resizeWindows()
         redrawMenu()
 
-    elseif sEvent == "char" or sEvent == "key" or sEvent == "paste" or sEvent == "terminate" then
+    elseif sEvent == "char" or sEvent == "key" or sEvent == "key_up" or sEvent == "paste" or sEvent == "terminate" then
         -- Keyboard event
         -- Passthrough to current process
-        resumeProcess( nCurrentProcess, unpack( tEventData ) )
+        resumeProcess( nCurrentProcess, table.unpack( tEventData ) )
         if cullProcess( nCurrentProcess ) then
             setMenuVisible( #tProcesses >= 2 )
             redrawMenu()
@@ -263,7 +263,7 @@ while #tProcesses > 0 do
             end
         end
 
-    elseif sEvent == "mouse_drag" or sEvent == "mouse_scroll" then
+    elseif sEvent == "mouse_drag" or sEvent == "mouse_up" or sEvent == "mouse_scroll" then
         -- Other mouse event
         local p1, x, y = tEventData[2], tEventData[3], tEventData[4]
         if not (bShowMenu and y == 1) then
@@ -280,7 +280,7 @@ while #tProcesses > 0 do
         -- Passthrough to all processes
         local nLimit = #tProcesses -- Storing this ensures any new things spawned don't get the event
         for n=1,nLimit do
-            resumeProcess( n, unpack( tEventData ) )
+            resumeProcess( n, table.unpack( tEventData ) )
         end
         if cullProcesses() then
             setMenuVisible( #tProcesses >= 2 )
