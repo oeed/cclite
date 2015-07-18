@@ -411,21 +411,19 @@ function love.load()
 end
 
 function love.mousereleased(x, y, button)
-	if x > 0 and x < Screen.sWidth and y > 0 and y < Screen.sHeight then -- Within screen bounds.
-		local termMouseX = math_bind(math.floor((x - _conf.terminal_guiScale) / Screen.pixelWidth) + 1,1,_conf.terminal_width)
-		local termMouseY = math_bind(math.floor((y - _conf.terminal_guiScale) / Screen.pixelHeight) + 1,1,_conf.terminal_height)
+	local termMouseX = math_bind(math.floor((x - _conf.terminal_guiScale) / Screen.pixelWidth) + 1,1,_conf.terminal_width)
+	local termMouseY = math_bind(math.floor((y - _conf.terminal_guiScale) / Screen.pixelHeight) + 1,1,_conf.terminal_height)
 
-		if button == "l" or button == "m" or button == "r" then
-			Computer.mouse.lastTermX = termMouseX
-			Computer.mouse.lastTermY = termMouseY
-			if button == "l" then button = 1
-			elseif button == "m" then button = 3
-			elseif button == "r" then button = 2
-			end
-			table.insert(Computer.eventQueue, {"mouse_up", button, termMouseX, termMouseY})
+	if Computer.mouse.isPressed and (button == "l" or button == "m" or button == "r") then
+		Computer.mouse.lastTermX = termMouseX
+		Computer.mouse.lastTermY = termMouseY
+		if button == "l" then button = 1
+		elseif button == "m" then button = 3
+		elseif button == "r" then button = 2
 		end
-		Computer.mouse.isPressed = false
+		table.insert(Computer.eventQueue, {"mouse_up", button, termMouseX, termMouseY})
 	end
+	Computer.mouse.isPressed = false
 end
 
 function love.mousepressed(x, y, button)
