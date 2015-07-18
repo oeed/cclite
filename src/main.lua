@@ -499,8 +499,7 @@ function love.load()
 	love.keyboard.setKeyRepeat(true)
 end
 
-function love.mousereleased(x, y, button)
-	loveframes.mousereleased(x, y, button)
+local function getActiveComputer()
 	-- Get the active computer
 	local Computer,order,highest = nil,-1,-1
 	for k,v in pairs(loveframes.base:GetChildren()) do
@@ -513,6 +512,13 @@ function love.mousereleased(x, y, button)
 		end
 	end
 	if Computer == nil or highest ~= order then return end
+	return Computer
+end
+
+function love.mousereleased(x, y, button)
+	loveframes.mousereleased(x, y, button)
+	local Computer = getActiveComputer()
+	if Computer == nil then return end
 	-- Does the computer support mouse?
 	if not Computer.colored then return end
 	-- Adjust for offset
@@ -538,18 +544,8 @@ function love.mousepressed(x, y, button)
 	if x < 1 or x > L2DScreenW or y < 1 or y > L2DScreenH then -- Out of screen bounds
 		return
 	end
-	-- Get the active computer
-	local Computer,order,highest = nil,-1,-1
-	for k,v in pairs(loveframes.base:GetChildren()) do
-		if v.draworder > highest then
-			highest = v.draworder
-			if v.emu ~= nil then
-				Computer = v.emu
-				order = v.draworder
-			end
-		end
-	end
-	if Computer == nil or highest ~= order then return end
+	local Computer = getActiveComputer()
+	if Computer == nil then return end
 	-- Does the computer support mouse?
 	if not Computer.colored then return end
 	-- Are we clicking on the computer?
@@ -580,18 +576,8 @@ end
 
 function love.textinput(unicode)
 	loveframes.textinput(unicode)
-	-- Get the active computer
-	local Computer,order,highest = nil,-1,-1
-	for k,v in pairs(loveframes.base:GetChildren()) do
-		if v.draworder > highest then
-			highest = v.draworder
-			if v.emu ~= nil then
-				Computer = v.emu
-				order = v.draworder
-			end
-		end
-	end
-	if Computer == nil or highest ~= order then return end
+	local Computer = getActiveComputer()
+	if Computer == nil then return end
 	if not Computer.blockInput then
 		-- Hack to get around android bug
 		if love.system.getOS() == "Android" and keys[unicode] ~= nil then
@@ -605,18 +591,8 @@ end
 
 function love.keypressed(key, isrepeat)
 	loveframes.keypressed(key, unicode)
-	-- Get the active computer
-	local Computer,order,highest = nil,-1,-1
-	for k,v in pairs(loveframes.base:GetChildren()) do
-		if v.draworder > highest then
-			highest = v.draworder
-			if v.emu ~= nil then
-				Computer = v.emu
-				order = v.draworder
-			end
-		end
-	end
-	if Computer == nil or highest ~= order then return end
+	local Computer = getActiveComputer()
+	if Computer == nil then return end
 	if love.keyboard.isDown("ctrl") and not isrepeat then
 		if Computer.actions.terminate == nil    and key == "t" then
 			Computer.actions.terminate = love.timer.getTime()
@@ -653,18 +629,8 @@ end
 
 function love.keyreleased(key)
 	loveframes.keyreleased(key)
-	-- Get the active computer
-	local Computer,order,highest = nil,-1,-1
-	for k,v in pairs(loveframes.base:GetChildren()) do
-		if v.draworder > highest then
-			highest = v.draworder
-			if v.emu ~= nil then
-				Computer = v.emu
-				order = v.draworder
-			end
-		end
-	end
-	if Computer == nil or highest ~= order then return end
+	local Computer = getActiveComputer()
+	if Computer == nil then return end
 	if keys[key] then
 		table.insert(Computer.eventQueue, {"key_up", keys[key]})
 	end
