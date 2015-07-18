@@ -410,8 +410,20 @@ function love.load()
 	Computer:start()
 end
 
-function love.mousereleased(x, y, _button)
+function love.mousereleased(x, y, button)
 	if x > 0 and x < Screen.sWidth and y > 0 and y < Screen.sHeight then -- Within screen bounds.
+		local termMouseX = math_bind(math.floor((x - _conf.terminal_guiScale) / Screen.pixelWidth) + 1,1,_conf.terminal_width)
+		local termMouseY = math_bind(math.floor((y - _conf.terminal_guiScale) / Screen.pixelHeight) + 1,1,_conf.terminal_height)
+
+		if button == "l" or button == "m" or button == "r" then
+			Computer.mouse.lastTermX = termMouseX
+			Computer.mouse.lastTermY = termMouseY
+			if button == "l" then button = 1
+			elseif button == "m" then button = 3
+			elseif button == "r" then button = 2
+			end
+			table.insert(Computer.eventQueue, {"mouse_up", button, termMouseX, termMouseY})
+		end
 		Computer.mouse.isPressed = false
 	end
 end
@@ -513,11 +525,17 @@ function love.keypressed(key, isrepeat)
 		table.insert(Computer.eventQueue, {"paste", cliptext})
 	elseif isrepeat and love.keyboard.isDown("ctrl") and (key == "t" or key == "s" or key == "r") then
 	elseif keys[key] then
-		table.insert(Computer.eventQueue, {"key", keys[key]})
+		table.insert(Computer.eventQueue, {"key", keys[key], isrepeat})
 		-- Hack to get around android bug
 		if love.system.getOS() == "Android" and #key == 1 and ChatAllowedCharacters[key:byte()] then
 			table.insert(Computer.eventQueue, {"char", key})
 		end
+	end
+end
+
+function love.keyreleased(key)
+	if keys[key] then
+		table.insert(Computer.eventQueue, {"key_up", keys[key]})
 	end
 end
 
