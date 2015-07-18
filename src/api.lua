@@ -246,27 +246,27 @@ addToDB(table)
 addToDB(coroutine)
 function api.tostring(...)
 	if select("#",...) == 0 then error("bad argument #1: value expected",2) end
-	local something = ...
+	local thing = ...
 	local fix
-	if something == nil then
+	if thing == nil then
 		return "nil"
-	elseif type(something) == "number" then
-		if math.floor(something) == something and something < 2^63 and something >= -2^63 then
-			fix = string.format("%.0f",something)
+	elseif type(thing) == "number" then
+		if thing == 1/0 or thing == -1/0 or thing == 0/0 or thing == -(0/0) or (math.floor(thing) == thing and thing < 2^63 and thing >= -2^63) then
+			fix = string.format("%.0f",thing)
 		else
-			fix = string.format("%.8G",something):gsub("E%+","E")
+			fix = string.format("%.8G",thing):gsub("E%+","E")
 		end
 		return fix
-	elseif type(something) == "table" then
-		fix = tostring(something):gsub("table: 0x","table: ")
+	elseif type(thing) == "table" then
+		fix = tostring(thing):gsub("table: 0x","table: ")
 		return fix
-	elseif _tostring_DB[something] ~= nil then
-		return _tostring_DB[something]
-	elseif type(something) == "function" then
-		fix = tostring(something):gsub("function: 0x","function: ")
+	elseif _tostring_DB[thing] ~= nil then
+		return _tostring_DB[thing]
+	elseif type(thing) == "function" then
+		fix = tostring(thing):gsub("function: 0x","function: ")
 		return fix
 	else
-		return tostring(something)
+		return tostring(thing)
 	end
 end
 function api.tonumber(...)
@@ -361,6 +361,39 @@ function api.inext(tbl, key)
 end
 
 api.term = {}
+local function validateColor(color,def)
+	if color >= 48 and color <= 57 then
+		return color - 48
+	elseif color >= 97 and color <= 102 then
+		return color - 87
+	end
+	return def
+end
+function api.term.blit(text,fg,bg)
+	if type(text) ~= "string" or type(fg) ~= "string" or type(bg) ~= "string" then
+		error("Expected string, string, string",2)
+	end
+	if #text ~= #fg or #text ~= #bg then
+		error("Arguments must be the same length",2)
+	end
+	if Computer.state.cursorY > _conf.terminal_height or Computer.state.cursorY < 1 or Computer.state.cursorX > _conf.terminal_width then
+		Computer.state.cursorX = Computer.state.cursorX + #text
+		return
+	end
+	for i = 1, #text do
+		local char = text:sub(i, i)
+		if Computer.state.cursorX + i - 1 >= 1 then
+			if Computer.state.cursorX + i - 1 > _conf.terminal_width then
+				break
+			end
+			Screen.textB[Computer.state.cursorY][Computer.state.cursorX + i - 1] = char
+			Screen.textColourB[Computer.state.cursorY][Computer.state.cursorX + i - 1] = 2^validateColor(fg:byte(i,i),0)
+			Screen.backgroundColourB[Computer.state.cursorY][Computer.state.cursorX + i - 1] = 2^validateColor(bg:byte(i,i),15)
+		end
+	end
+	Computer.state.cursorX = Computer.state.cursorX + #text
+	Screen.dirty = true
+end
 function api.term.clear()
 	for y = 1, _conf.terminal_height do
 		for x = 1, _conf.terminal_width do
@@ -416,6 +449,9 @@ function api.term.write(text)
 	Computer.state.cursorX = Computer.state.cursorX + #text
 	Screen.dirty = true
 end
+function api.term.getTextColor()
+	return Computer.state.fg
+end
 function api.term.setTextColor(...)
 	local num = ...
 	if type(num) ~= "number" or select("#",...) ~= 1 then error("Expected number",2) end
@@ -425,6 +461,9 @@ function api.term.setTextColor(...)
 	num = 2^math.floor(math.log(num)/math.log(2))
 	Computer.state.fg = num
 	Screen.dirty = true
+end
+function api.term.getBackgroundColor()
+	return Computer.state.bg
 end
 function api.term.setBackgroundColor(...)
 	local num = ...
@@ -697,13 +736,13 @@ local function cleanPath(path,wildcard)
 
 	local tPath = {}
 	for part in path:gmatch("[^/]+") do
-   		if part ~= "" and part ~= "." then
-   			if part == ".." and #tPath > 0 and tPath[#tPath] ~= ".." then
-   				table.remove(tPath)
-   			else
-   				table.insert(tPath, part:sub(1,255))
-   			end
-   		end
+		if part ~= "" and part ~= "." then
+			if part == ".." and #tPath > 0 and tPath[#tPath] ~= ".." then
+				table.remove(tPath)
+			else
+				table.insert(tPath, part:sub(1,255))
+			end
+		end
 	end
 	return table.concat(tPath, "/")
 end
@@ -921,8 +960,8 @@ local function deltree(sFolder)
 	local tObjects = vfs.getDirectoryItems(sFolder)
 
 	if tObjects then
-   		for _, sObject in pairs(tObjects) do
-	   		local pObject =  sFolder.."/"..sObject
+		for _, sObject in pairs(tObjects) do
+			local pObject = sFolder.."/"..sObject
 
 			if vfs.isDirectory(pObject) then
 				deltree(pObject)
@@ -943,8 +982,8 @@ local function copytree(sFolder, sToFolder)
 	local tObjects = vfs.getDirectoryItems(sFolder)
 
 	if tObjects then
-   		for _, sObject in pairs(tObjects) do
-	   		local pObject =  sFolder.."/"..sObject
+		for _, sObject in pairs(tObjects) do
+			local pObject = sFolder.."/"..sObject
 			local pToObject = sToFolder.."/"..sObject
 
 			if vfs.isDirectory(pObject) then
@@ -1138,55 +1177,51 @@ function api.redstone.testBundledInput(side, color)
 end
 
 api.bit = {}
-
-local function validateBitArg(arg)
-	if arg == nil or type(arg) == "function" then
-		real_error("Java Exception Thrown: java.lang.IllegalArgumentException: too few arguments",-1)
-	elseif type(arg) ~= "number" then
-		real_error("Java Exception Thrown: java.lang.IllegalArgumentException: number expected",-1)
-	elseif math.floor(arg) ~= arg or arg == math.huge or arg == -math.huge then
-		real_error("Java Exception Thrown: java.lang.IllegalArgumentException: passed number is not an integer",-1)
-	elseif arg > 0xFFFFFFFF then
-		real_error("Java Exception Thrown: java.lang.IllegalArgumentException: number is too large (maximum allowed: 2^32-1)",-1)
-	end
-end
-
+--TODO: Various other things are wrong with the old bit api
 function api.bit.norm(val)
 	while val < 0 do val = val + 4294967296 end
 	return val
 end
 function api.bit.blshift(n, bits)
-	validateBitArg(n)
-	validateBitArg(bits)
+	if type(n) ~= "number" or type(bits) ~= "number" then
+		error("Expected number, number",2)
+	end
 	return api.bit.norm(bit.lshift(n, bits))
 end
 function api.bit.brshift(n, bits)
-	validateBitArg(n)
-	validateBitArg(bits)
+	if type(n) ~= "number" or type(bits) ~= "number" then
+		error("Expected number, number",2)
+	end
 	return api.bit.norm(bit.arshift(n, bits))
 end
 function api.bit.blogic_rshift(n, bits)
-	validateBitArg(n)
-	validateBitArg(bits)
+	if type(n) ~= "number" or type(bits) ~= "number" then
+		error("Expected number, number",2)
+	end
 	return api.bit.norm(bit.rshift(n, bits))
 end
 function api.bit.bxor(m, n)
-	validateBitArg(m)
-	validateBitArg(n)
+	if type(m) ~= "number" or type(n) ~= "number" then
+		error("Expected number, number",2)
+	end
 	return api.bit.norm(bit.bxor(m, n))
 end
 function api.bit.bor(m, n)
-	validateBitArg(m)
-	validateBitArg(n)
+	if type(m) ~= "number" or type(n) ~= "number" then
+		error("Expected number, number",2)
+	end
 	return api.bit.norm(bit.bor(m, n))
 end
 function api.bit.band(m, n)
-	validateBitArg(m)
-	validateBitArg(n)
+	if type(m) ~= "number" or type(n) ~= "number" then
+		error("Expected number, number",2)
+	end
 	return api.bit.norm(bit.band(m, n))
 end
 function api.bit.bnot(n)
-	validateBitArg(n)
+	if type(n) ~= "number" then
+		error("Expected number",2)
+	end
 	return api.bit.norm(bit.bnot(n))
 end
 
@@ -1263,7 +1298,10 @@ _tostring_DB[error] = "error"
 function api.init() -- Called after this file is loaded! Important. Else api.x is not defined
 	api.math.randomseed(math.random(0,0xFFFFFFFFFFFF))
 	api.env = {
-		_VERSION = "Luaj-jse 2.0.3",
+		_CC_VERSION="1.74",
+		_LUAJ_VERSION="2.0.3",
+		_MC_VERSION="1.7.10",
+		_VERSION="Lua 5.1",
 		__inext = api.inext,
 		tostring = api.tostring,
 		tonumber = api.tonumber,
@@ -1292,13 +1330,18 @@ function api.init() -- Called after this file is loaded! Important. Else api.x i
 
 		-- CC apis (BIOS completes api.)
 		term = {
+			blit = api.term.blit,
 			clear = api.term.clear,
 			clearLine = api.term.clearLine,
 			getSize = api.term.getSize,
 			getCursorPos = api.term.getCursorPos,
 			setCursorPos = api.term.setCursorPos,
+			getTextColor = api.term.getTextColor,
+			getTextColour = api.term.getTextColor,
 			setTextColor = api.term.setTextColor,
 			setTextColour = api.term.setTextColor,
+			getBackgroundColor = api.term.getBackgroundColor,
+			getBackgroundColour = api.term.getBackgroundColor,
 			setBackgroundColor = api.term.setBackgroundColor,
 			setBackgroundColour = api.term.setBackgroundColor,
 			setCursorBlink = api.term.setCursorBlink,

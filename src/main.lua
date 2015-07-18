@@ -567,7 +567,7 @@ function Computer:update()
 		if Screen.lastCursor == nil then
 			Screen.lastCursor = now
 		end
-		if now - Screen.lastCursor >= 0.25 then
+		if now - Screen.lastCursor >= 3/8 then
 			Screen.showCursor = not Screen.showCursor
 			Screen.lastCursor = now
 			if Computer.state.cursorY >= 1 and Computer.state.cursorY <= _conf.terminal_height and Computer.state.cursorX >= 1 and Computer.state.cursorX <= _conf.terminal_width then

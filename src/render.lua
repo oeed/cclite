@@ -127,6 +127,13 @@ local function drawMessage(message,x,y)
 	lprint(message, x, y, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 end
 
+local hidden = {
+	["\0"]=true,
+	["\9"]=true,
+	["\r"]=true,
+	["\n"]=true,
+	[" "]=true,
+}
 function Screen:draw()
 	-- Render terminal
 	if not Computer.running then
@@ -150,7 +157,7 @@ function Screen:draw()
 			local self_textColourB = self.textColourB[y + 1]
 			for x = 0, decWidth do
 				local text = self_textB[x + 1]
-				if text ~= "\0" and text ~= "\9" and text ~= " " then
+				if not hidden[text] then
 					local sByte = string.byte(text)
 					if sByte < 32 or sByte > 126 then
 						text = "?"
