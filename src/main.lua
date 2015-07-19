@@ -542,6 +542,7 @@ function love.visible(see)
 		Screen.dirty = true
 	end
 end
+love.focus = love.visible
 
 --[[
 	Not implementing:

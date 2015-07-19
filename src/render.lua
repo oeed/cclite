@@ -137,12 +137,23 @@ function Screen:draw()
 		-- Render background color
 		setColor(COLOUR_CODE[self.backgroundColourB[1][1]])
 		for y = 0, decHeight do
+			local length, last, lastx = 0
+			local ypos = y * self.pixelHeight + (y == 0 and 0 or _conf.terminal_guiScale)
+			local ylength = self.pixelHeight + ((y == 0 or y == decHeight) and _conf.terminal_guiScale or 0)
 			for x = 0, decWidth do
-
-				setColor(COLOUR_CODE[self.backgroundColourB[y + 1][x + 1]]) -- TODO COLOUR_CODE lookup might be too slow?
-				ldrawRect("fill", x * self.pixelWidth + (x == 0 and 0 or _conf.terminal_guiScale), y * self.pixelHeight + (y == 0 and 0 or _conf.terminal_guiScale), self.pixelWidth + ((x == 0 or x == decWidth) and _conf.terminal_guiScale or 0), self.pixelHeight + ((y == 0 or y == decHeight) and _conf.terminal_guiScale or 0))
-
+				if self.backgroundColourB[y + 1][x + 1] ~= last then
+					if last then
+						ldrawRect("fill", lastx * self.pixelWidth + (lastx == 0 and 0 or _conf.terminal_guiScale), ypos, self.pixelWidth * length + (lastx == 0 and _conf.terminal_guiScale or 0), ylength)
+					end
+					last = self.backgroundColourB[y + 1][x + 1]
+					lastx = x
+					length = 1
+					setColor(COLOUR_CODE[last]) -- TODO COLOUR_CODE lookup might be too slow?
+				else
+					length = length + 1
+				end
 			end
+			ldrawRect("fill", lastx * self.pixelWidth + (lastx == 0 and 0 or _conf.terminal_guiScale), ypos, self.pixelWidth * length + _conf.terminal_guiScale * (lastx == 0 and 2 or 1), ylength)
 		end
 
 		-- Render text
