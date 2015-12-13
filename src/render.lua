@@ -1,16 +1,16 @@
 local COLOUR_RGB = {
-	WHITE = {240, 240, 240},
-	ORANGE = {242, 178, 51},
-	MAGENTA = {229, 127, 216},
-	LIGHT_BLUE = {153, 178, 242},
+	WHITE = {242, 242, 242},
+	ORANGE = {243, 187, 57},
+	MAGENTA = {232, 138, 221},
+	LIGHT_BLUE = {163, 186, 244},
 	YELLOW = {222, 222, 108},
 	LIME = {127, 204, 25},
 	PINK = {242, 178, 204},
-	GRAY = {76, 76, 76},
-	LIGHT_GRAY = {153, 153, 153},
+	GRAY = {86, 86, 86},
+	LIGHT_GRAY = {163, 163, 163},
 	CYAN = {76, 153, 178},
 	PURPLE = {178, 102, 229},
-	BLUE = {51, 102, 204},
+	BLUE = {60, 113, 210},
 	BROWN = {127, 102, 76},
 	GREEN = {87, 166, 78},
 	RED = {204, 76, 76},
@@ -36,15 +36,21 @@ local COLOUR_CODE = {
 	[32768] = COLOUR_RGB.BLACK,
 }
 
+local COLOUR_CODE_BG = {}
+for k,v in pairs(COLOUR_CODE) do
+	COLOUR_CODE_BG[k] = v
+end
+COLOUR_CODE_BG[32768] = {0,0,0}
+
 Screen = {
-	sWidth = (_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2),
-	sHeight = (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2),
+	sWidth = (_conf.terminal_width *  _conf.terminal_guiScale),
+	sHeight = (_conf.terminal_height * _conf.terminal_guiScale),
 	textB = {},
 	backgroundColourB = {},
 	textColourB = {},
 	font = nil,
-	pixelWidth = _conf.terminal_guiScale * 6,
-	pixelHeight = _conf.terminal_guiScale * 9,
+	pixelWidth = _conf.terminal_guiScale,
+	pixelHeight = _conf.terminal_guiScale,
 	showCursor = false,
 	lastCursor = nil,
 	dirty = true,
@@ -121,13 +127,6 @@ local function drawMessage(message,x,y)
 	lprint(message, x, y, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
 end
 
-local hidden = {
-	["\0"]=true,
-	["\9"]=true,
-	["\r"]=true,
-	["\n"]=true,
-	[" "]=true,
-}
 function Screen:draw()
 	-- Render terminal
 	if not Computer.running then
@@ -135,49 +134,38 @@ function Screen:draw()
 		ldrawRect("fill", 0, 0, self.sWidth, self.sHeight)
 	else
 		-- Render background color
-		setColor(COLOUR_CODE[self.backgroundColourB[1][1]])
+		setColor(COLOUR_CODE_BG[self.backgroundColourB[1][1]])
 		for y = 0, decHeight do
-			local length, last, lastx = 0
-			local ypos = y * self.pixelHeight + (y == 0 and 0 or _conf.terminal_guiScale)
-			local ylength = self.pixelHeight + ((y == 0 or y == decHeight) and _conf.terminal_guiScale or 0)
 			for x = 0, decWidth do
-				if self.backgroundColourB[y + 1][x + 1] ~= last then
-					if last then
-						ldrawRect("fill", lastx * self.pixelWidth + (lastx == 0 and 0 or _conf.terminal_guiScale), ypos, self.pixelWidth * length + (lastx == 0 and _conf.terminal_guiScale or 0), ylength)
-					end
-					last = self.backgroundColourB[y + 1][x + 1]
-					lastx = x
-					length = 1
-					setColor(COLOUR_CODE[last]) -- TODO COLOUR_CODE lookup might be too slow?
-				else
-					length = length + 1
-				end
+
+				setColor(COLOUR_CODE_BG[self.backgroundColourB[y + 1][x + 1]]) -- TODO COLOUR_CODE lookup might be too slow?
+				ldrawRect("fill", x * self.pixelWidth, y * self.pixelHeight, self.pixelWidth, self.pixelHeight)
+
 			end
-			ldrawRect("fill", lastx * self.pixelWidth + (lastx == 0 and 0 or _conf.terminal_guiScale), ypos, self.pixelWidth * length + _conf.terminal_guiScale * (lastx == 0 and 2 or 1), ylength)
 		end
 
 		-- Render text
-		for y = 0, decHeight do
-			local self_textB = self.textB[y + 1]
-			local self_textColourB = self.textColourB[y + 1]
-			for x = 0, decWidth do
-				local text = self_textB[x + 1]
-				if not hidden[text] then
-					local sByte = string.byte(text)
-					if sByte < 32 or sByte > 126 then
-						text = "?"
-					end
-					setColor(COLOUR_CODE[self_textColourB[x + 1]])
-					lprint(text, x * self.pixelWidth + tOffset[text] + _conf.terminal_guiScale, y * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
-				end
-			end
-		end
+		-- for y = 0, decHeight do
+		-- 	local self_textB = self.textB[y + 1]
+		-- 	local self_textColourB = self.textColourB[y + 1]
+		-- 	for x = 0, decWidth do
+		-- 		local text = self_textB[x + 1]
+		-- 		if text ~= "\0" and text ~= "\9" and text ~= " " then
+		-- 			local sByte = string.byte(text)
+		-- 			if sByte < 32 or sByte > 126 then
+		-- 				text = "?"
+		-- 			end
+		-- 			setColor(COLOUR_CODE[self_textColourB[x + 1]])
+		-- 			lprint(text, x * self.pixelWidth + tOffset[text] + _conf.terminal_guiScale, y * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
+		-- 		end
+		-- 	end
+		-- end
 
 		-- Render cursor
-		if Computer.state.blink and self.showCursor then
-			setColor(COLOUR_CODE[Computer.state.fg])
-			lprint("_", (Computer.state.cursorX - 1) * self.pixelWidth + tOffset["_"] + _conf.terminal_guiScale, (Computer.state.cursorY - 1) * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
-		end
+		-- if Computer.state.blink and self.showCursor then
+		-- 	setColor(COLOUR_CODE[Computer.state.fg])
+		-- 	lprint("_", (Computer.state.cursorX - 1) * self.pixelWidth + tOffset["_"] + _conf.terminal_guiScale, (Computer.state.cursorY - 1) * self.pixelHeight + _conf.terminal_guiScale, 0, _conf.terminal_guiScale, _conf.terminal_guiScale)
+		-- end
 	end
 
 	-- Render emulator elements

@@ -8,10 +8,10 @@ local defaultConf = [[_conf = {
 	enableAPI_cclite = true,
 	
 	-- The height of Computer screens, in characters
-	terminal_height = 19,
+	terminal_height = 200,
 	
 	-- The width of Computer screens, in characters
-	terminal_width = 51,
+	terminal_width = 320,
 	
 	-- The GUI scale of Computer screens
 	terminal_guiScale = 2,
@@ -20,7 +20,7 @@ local defaultConf = [[_conf = {
 	cclite_showFPS = false,
 	
 	-- The FPS to lock CCLite to
-	lockfps = 20,
+	lockfps = 60,
 	
 	-- Enable https connections through luasec
 	useLuaSec = false,
@@ -93,6 +93,8 @@ function validateConfig(cfgData,setup)
 	end
 end
 
+love.filesystem.setSymlinksEnabled(true)
+
 if love.filesystem.exists("/CCLite.cfg") then
 	local cfgData = love.filesystem.read("/CCLite.cfg")
 	validateConfig(cfgData)
@@ -102,7 +104,7 @@ end
 
 love.window.setTitle("ComputerCraft Emulator")
 love.window.setIcon(love.image.newImageData("res/icon.png"))
-love.window.setMode((_conf.terminal_width * 6 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), (_conf.terminal_height * 9 * _conf.terminal_guiScale) + (_conf.terminal_guiScale * 2), {vsync = false})
+love.window.setMode((_conf.terminal_width * _conf.terminal_guiScale), (_conf.terminal_height * _conf.terminal_guiScale) - 1, {vsync = false})
 
 if _conf.enableAPI_http then require("http.HttpRequest") end
 bit = require("bit")
@@ -110,7 +112,7 @@ require("render")
 require("api")
 require("vfs")
 
-if _conf.compat_loadstringMask ~= nil then
+if _conf.compat_loadstringMask ~= Ïnil then
 	Screen:message("_conf.compat_loadstringMask is obsolete")
 end
 
@@ -194,6 +196,8 @@ keys = {
 	["capslock"] = 58,
 	["numlock"] = 69,
 	["scrolllock"] = 70,
+	["leftCommand"] = 219,
+	["rightCommand"] = 220,
 	
 	["f1"] = 59,
 	["f2"] = 60,
@@ -256,7 +260,7 @@ Computer = {
 		fg = 1,
 		blink = false,
 		label = nil,
-		startTime = math.floor(love.timer.getTime()*20)/20,
+		startTime = math.floor(love.timer.getTime()*60)/60,
 		peripherals = {}
 	},
 	minecraft = {
@@ -287,7 +291,7 @@ function Computer:start()
 	Computer.state.bg = 32768
 	Computer.state.fg = 1
 	Computer.state.blink = false
-	Computer.state.startTime = math.floor(love.timer.getTime()*20)/20
+	Computer.state.startTime = math.floor(love.timer.getTime()*60)/60
 
 	local fn, err = loadstring(love.filesystem.read("/lua/bios.lua"),"@bios")
 
@@ -336,7 +340,7 @@ end
 
 function Computer:resume(...)
 	if not self.running then return end
-	debug.sethook(self.proc,function() error("Too long without yielding",2) end,"",9e7)
+	debug.sethook(self.proc,function() error("Too long without yielding",2) end,"",1e98)
 	local ok, err = coroutine.resume(self.proc, ...)
 	debug.sethook(self.proc)
 	if not self.proc then return end -- Computer:stop could be called within the coroutine resulting in proc being nil
@@ -351,6 +355,9 @@ function Computer:resume(...)
 end
 
 function love.load()
+
+    -- love.mouse.setCursor(love.mouse.getSystemCursor("crosshair"))
+
 	if love.system.getOS() == "Android" then
 		love.keyboard.setTextInput(true)
 	end
@@ -380,26 +387,26 @@ function love.load()
 	local cache0
 	if love.filesystem.exists("data/0/") and not love.filesystem.isDirectory("data/0/") then
 		print("Backing up /0")
-		cache0 = love.filesystem.read("/data/0")
-		love.filesystem.remove("/data/0")
-		love.filesystem.createDirectory("data/0/")
+		-- cache0 = love.filesystem.read("/data/0")
+		-- love.filesystem.remove("/data/0")
+		-- love.filesystem.createDirectory("data/0/")
 	end
 	
-	vfs.mount("/data","/","hdd")
-	-- Migrate to new folder.
-	local list = vfs.getDirectoryItems("/")
-	for k,v in pairs(list) do
-		if tonumber(v) == nil or tonumber(v) < 0 or tonumber(v) ~= math.floor(tonumber(v)) or v ~= tostring(tonumber(v)) then
-			print("Migrating /" .. v)
-			api._copytree("/" .. v, "/0/" .. v)
-			api._deltree("/" .. v)
-		end
-	end
-	vfs.unmount("/")
+	-- vfs.mount("/data","/","hdd")
+	-- -- Migrate to new folder.
+	-- local list = vfs.getDirectoryItems("/")
+	-- for k,v in pairs(list) do
+	-- 	if tonumber(v) == nil or tonumber(v) < 0 or tonumber(v) ~= math.floor(tonumber(v)) or v ~= tostring(tonumber(v)) then
+	-- 		print("Migrating /" .. v)
+	-- 		api._copytree("/" .. v, "/0/" .. v)
+	-- 		api._deltree("/" .. v)
+	-- 	end
+	-- end
+	-- vfs.unmount("/")
 	
 	if cache0 ~= nil then
 		print("Restoring /0")
-		love.filesystem.write("/data/0/0",cache0)
+		-- love.filesystem.write("/data/0/0",cache0)
 	end
 	
 	vfs.mount("/data/0","/","hdd")
@@ -411,19 +418,21 @@ function love.load()
 end
 
 function love.mousereleased(x, y, button)
-	local termMouseX = math_bind(math.floor((x - _conf.terminal_guiScale) / Screen.pixelWidth) + 1,1,_conf.terminal_width)
-	local termMouseY = math_bind(math.floor((y - _conf.terminal_guiScale) / Screen.pixelHeight) + 1,1,_conf.terminal_height)
+	if x > 0 and x < Screen.sWidth and y > 0 and y < Screen.sHeight then -- Within screen bounds.
+		Computer.mouse.isPressed = false
+		local termMouseX = math_bind(math.floor((x - _conf.terminal_guiScale) / Screen.pixelWidth) + 2,1,_conf.terminal_width)
+		local termMouseY = math_bind(math.floor((y - _conf.terminal_guiScale) / Screen.pixelHeight) + 2,1,_conf.terminal_height)
 
-	if Computer.mouse.isPressed and (button == "l" or button == "m" or button == "r") then
-		Computer.mouse.lastTermX = termMouseX
-		Computer.mouse.lastTermY = termMouseY
-		if button == "l" then button = 1
-		elseif button == "m" then button = 3
-		elseif button == "r" then button = 2
+		if button == "l" or button == "m" or button == "r" then
+			Computer.mouse.lastTermX = termMouseX
+			Computer.mouse.lastTermY = termMouseY
+			if button == "l" then button = 1
+			elseif button == "m" then button = 3
+			elseif button == "r" then button = 2
+			end
+			table.insert(Computer.eventQueue, {"mouse_up", button, termMouseX, termMouseY})
 		end
-		table.insert(Computer.eventQueue, {"mouse_up", button, termMouseX, termMouseY})
 	end
-	Computer.mouse.isPressed = false
 end
 
 function love.mousepressed(x, y, button)
@@ -463,8 +472,8 @@ function love.mousepressed(x, y, button)
 				end
 			end
 		else
-			local termMouseX = math_bind(math.floor((x - _conf.terminal_guiScale) / Screen.pixelWidth) + 1,1,_conf.terminal_width)
-			local termMouseY = math_bind(math.floor((y - _conf.terminal_guiScale) / Screen.pixelHeight) + 1,1,_conf.terminal_height)
+			local termMouseX = math_bind(math.floor((x - _conf.terminal_guiScale) / Screen.pixelWidth) + 2,1,_conf.terminal_width)
+			local termMouseY = math_bind(math.floor((y - _conf.terminal_guiScale) / Screen.pixelHeight) + 2,1,_conf.terminal_height)
 
 			if button == "l" or button == "m" or button == "r" then
 				Computer.mouse.isPressed = true
@@ -531,7 +540,7 @@ function love.keypressed(key, isrepeat)
 	end
 end
 
-function love.keyreleased(key)
+function love.keyreleased(key, isrepeat)
 	if keys[key] then
 		table.insert(Computer.eventQueue, {"key_up", keys[key]})
 	end
@@ -542,7 +551,6 @@ function love.visible(see)
 		Screen.dirty = true
 	end
 end
-love.focus = love.visible
 
 --[[
 	Not implementing:
@@ -584,7 +592,7 @@ function Computer:update()
 		if Screen.lastCursor == nil then
 			Screen.lastCursor = now
 		end
-		if now - Screen.lastCursor >= 3/8 then
+		if now - Screen.lastCursor >= 0.25 then
 			Screen.showCursor = not Screen.showCursor
 			Screen.lastCursor = now
 			if Computer.state.cursorY >= 1 and Computer.state.cursorY <= _conf.terminal_height and Computer.state.cursorX >= 1 and Computer.state.cursorX <= _conf.terminal_width then
@@ -677,15 +685,15 @@ function Computer:update()
 	if self.mouse.isPressed then
 		local mouseX = love.mouse.getX()
 		local mouseY = love.mouse.getY()
-		local termMouseX = math_bind(math.floor((mouseX - _conf.terminal_guiScale) / Screen.pixelWidth) + 1, 1, _conf.terminal_width)
-		local termMouseY = math_bind(math.floor((mouseY - _conf.terminal_guiScale) / Screen.pixelHeight) + 1, 1, _conf.terminal_width)
+		local termMouseX = math_bind(math.floor((mouseX - _conf.terminal_guiScale) / Screen.pixelWidth) + 2, 1, _conf.terminal_width)
+		local termMouseY = math_bind(math.floor((mouseY - _conf.terminal_guiScale) / Screen.pixelHeight) + 2, 1, _conf.terminal_width)
 		if (termMouseX ~= self.mouse.lastTermX or termMouseY ~= self.mouse.lastTermY)
 			and (mouseX > 0 and mouseX < Screen.sWidth and
 				mouseY > 0 and mouseY < Screen.sHeight) then
 
 			self.mouse.lastTermX = termMouseX
 			self.mouse.lastTermY = termMouseY
-
+-- TODO: drag disabled
 			table.insert (self.eventQueue, {"mouse_drag", love.mouse.isDown("r") and 2 or 1, termMouseX, termMouseY})
 		end
 	end
@@ -753,6 +761,7 @@ function love.run()
 		end
 
 		-- Call update and draw
+		lovebird.update()
 		Computer:update()
 		if not love.window.isVisible() then Screen.dirty = false end
 		if Screen.dirty then
