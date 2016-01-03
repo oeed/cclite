@@ -682,18 +682,18 @@ function Computer:update()
 	end
 	
 	-- Mouse
-	if self.mouse.isPressed then
-		local mouseX = love.mouse.getX()
-		local mouseY = love.mouse.getY()
-		local termMouseX = math_bind(math.floor((mouseX - _conf.terminal_guiScale) / Screen.pixelWidth) + 2, 1, _conf.terminal_width)
-		local termMouseY = math_bind(math.floor((mouseY - _conf.terminal_guiScale) / Screen.pixelHeight) + 2, 1, _conf.terminal_width)
-		if (termMouseX ~= self.mouse.lastTermX or termMouseY ~= self.mouse.lastTermY)
-			and (mouseX > 0 and mouseX < Screen.sWidth and
-				mouseY > 0 and mouseY < Screen.sHeight) then
+	local mouseX = love.mouse.getX()
+	local mouseY = love.mouse.getY()
+	local termMouseX = math_bind(math.floor((mouseX - _conf.terminal_guiScale) / Screen.pixelWidth) + 2, 1, _conf.terminal_width)
+	local termMouseY = math_bind(math.floor((mouseY - _conf.terminal_guiScale) / Screen.pixelHeight) + 2, 1, _conf.terminal_width)
+	if (termMouseX ~= self.mouse.lastTermX or termMouseY ~= self.mouse.lastTermY)
+		and (mouseX > 0 and mouseX < Screen.sWidth and
+			mouseY > 0 and mouseY < Screen.sHeight) then
 
-			self.mouse.lastTermX = termMouseX
-			self.mouse.lastTermY = termMouseY
--- TODO: drag disabled
+		self.mouse.lastTermX = termMouseX
+		self.mouse.lastTermY = termMouseY
+		table.insert (self.eventQueue, {"mouse_move", termMouseX, termMouseY})
+		if self.mouse.isPressed then
 			table.insert (self.eventQueue, {"mouse_drag", love.mouse.isDown("r") and 2 or 1, termMouseX, termMouseY})
 		end
 	end
