@@ -1,3 +1,5 @@
+local lovebird = require "lovebird"
+
 local messageCache = {}
 
 local defaultConf = [[_conf = {
@@ -224,6 +226,8 @@ keys = {
 	["ralt"] = 184,
 	["lalt"] = 56,
 }
+
+love.mouse.setVisible( false )
 
 -- Patch love.keyboard.isDown to make ctrl checking easier
 local olkiD = love.keyboard.isDown
